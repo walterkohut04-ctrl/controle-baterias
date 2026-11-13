@@ -799,7 +799,7 @@ function Precos({precos, vendas, cfg, isAdmin}){
   const ultimaVenda = m => { const k=chaveModelo(m); return vendas.filter(v=>chaveModelo(v.modelo)===k).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; };
   async function salvar(p){
     const ant = precos.find(x=>x.id===p.id);
-    let n = {...p, valor:num(p.valor)};
+    let n = {...p, valor:num(p.valor), valorAntigo: p.valorAntigo===''||p.valorAntigo==null ? null : num(p.valorAntigo)};
     if (ant && num(ant.valor)!==n.valor){ n.valorAntigo = num(ant.valor); n.historico=[...(ant.historico||[]),{valor:num(ant.valor),ate:hoje()}].slice(-20); }
     n.atualizadoEm = hoje();
     await store.put('precos', n); setEdit(null); toast('Preço salvo');
@@ -807,13 +807,13 @@ function Precos({precos, vendas, cfg, isAdmin}){
   async function excluir(p){ if(confirm(`Excluir ${p.categoria} ${p.modelo} da tabela?`)) { await store.del('precos',p.id); setEdit(null); } }
   return <>
     <div className="row" style={{marginBottom:14}}><div><h1>Tabela de preços</h1><div className="sub" style={{margin:0}}>Custo atual dos itens (Tecnopemt). Usado automaticamente ao lançar vendas.</div></div><div className="sp"/>
-      {isAdmin&&<button className="btn pri" onClick={()=>setEdit({id:'',categoria:'Bateria',modelo:'',valor:''})}>+ Novo item</button>}</div>
+      {isAdmin&&<button className="btn pri" onClick={()=>setEdit({id:'',categoria:'Bateria',modelo:'',valorAntigo:'',valor:''})}>+ Novo item</button>}</div>
     {[...cats,...outras].map(cat=>{ const itens = precos.filter(p=>p.categoria===cat).sort((a,b)=>a.modelo.localeCompare(b.modelo)); if(!itens.length) return null;
       return <div className="card" key={cat} style={{padding:6}}>
         <h2 style={{padding:'8px 8px 0'}}>{cat==='Bateria'?'🔋':cat==='Carregador'?'🔌':'📟'} {cat}</h2>
         <div className="scroll"><table><thead><tr><th>Modelo</th><th className="n">Valor antigo</th><th className="n">Valor atual</th><th className="n">Variação</th>
           {cat==='Bateria'&&<th className="n">Venda sugerida*</th>}{cat==='Bateria'&&<th>Última venda</th>}<th>Atualizado</th><th/></tr></thead>
-        <tbody>{itens.map(p=>{ const varr = p.valorAntigo? (p.valor-p.valorAntigo)/p.valorAntigo : 0; const uv = cat==='Bateria'&&ultimaVenda(p.modelo);
+        <tbody>{itens.map(p=>{ const varr = num(p.valorAntigo)? (p.valor-num(p.valorAntigo))/num(p.valorAntigo) : 0; const uv = cat==='Bateria'&&ultimaVenda(p.modelo);
           const ind = precos.find(x=>x.categoria==='Indicador'); const sug = precoSugerido(num(p.valor)+num(ind?.valor), cfg.metaMargem, cfg.imposto);
           return <tr key={p.id}><td><b>{p.modelo}</b></td><td className="n muted">{p.valorAntigo!=null&&p.valorAntigo!==''?brl(p.valorAntigo):'—'}</td><td className="n"><b>{brl(p.valor)}</b></td>
           <td className="n"><span className={'pill '+(varr>0?'p-bad':varr<0?'p-ok':'p-gray')}>{varr>0?'▲':varr<0?'▼':''} {pct(Math.abs(varr))}</span></td>
@@ -834,7 +834,8 @@ function PrecoForm({p,onSalvar,onExcluir}){
     <div className="fg">
       <div className="c2"><label className="lb">Categoria</label><input className="f" list="dl-cat" value={v.categoria} onChange={e=>setV({...v,categoria:e.target.value})} disabled={!!p.id}/><datalist id="dl-cat"><option value="Bateria"/><option value="Carregador"/><option value="Indicador"/></datalist></div>
       <div className="c2"><label className="lb">Modelo</label><input className="f" value={v.modelo} onChange={e=>setV({...v,modelo:e.target.value})} disabled={!!p.id} placeholder="Ex.: 24V230AH"/></div>
-      <div className="c2"><label className="lb">Novo valor (custo)</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus/></div>
+      {!p.id&&<div className="c2"><label className="lb">Preço antigo</label><Money value={v.valorAntigo??''} onChange={x=>setV({...v,valorAntigo:x})} placeholder="0,00"/></div>}
+      <div className="c2"><label className="lb">{p.id?'Novo valor (custo)':'Preço atual'}</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus={!!p.id} placeholder="0,00"/></div>
       {p.id&&<div className="c2"><label className="lb">Valor atual</label><div style={{padding:'9px 0'}}>{brl(p.valor)} <span className="small muted">→ passa a ser o “valor antigo”</span></div></div>}
     </div>
     {p.historico?.length>0&&<div className="small muted" style={{marginTop:10}}>Histórico: {p.historico.slice().reverse().map(h=>`${brl(h.valor)} (até ${dataBR(h.ate)})`).join(' · ')}</div>}
