@@ -27,5 +27,12 @@
 //  USAR_LOGIN = true   -> vários usuários com e-mail e senha
 //                         (ative Authentication > E-mail/senha e use firestore-login.rules)
 // ============================================================
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCFCwHkV7mIFqXO5D1CakDF_NJAhdHH5pk",
+  authDomain: "controle-baterias-25741.firebaseapp.com",
+  projectId: "controle-baterias-25741",
+  storageBucket: "controle-baterias-25741.firebasestorage.app",
+  messagingSenderId: "455390594179",
+  appId: "1:455390594179:web:6c41002b5b811ee25047b6"
+};
 window.USAR_LOGIN = false;
