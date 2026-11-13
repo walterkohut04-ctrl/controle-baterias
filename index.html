@@ -187,6 +187,12 @@ const num = v => { if (typeof v==='number') return v; if(!v) return 0; const s=S
 const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const dataBR = s => s ? s.split('-').reverse().join('/') : '';
 const normaliza = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+// busca "contém": todas as palavras digitadas precisam aparecer em qualquer parte do texto (sem acento/maiúscula); números também casam com CNPJ/CPF sem pontuação
+function casaBusca(campos, busca){
+  const termos = normaliza(busca).split(/\s+/).filter(Boolean); if(!termos.length) return true;
+  const txt = normaliza(campos.filter(Boolean).join(' ')); const dig = campos.filter(Boolean).join(' ').replace(/\D/g,'');
+  return termos.every(t => txt.includes(t) || (/\d/.test(t) && t.replace(/\D/g,'').length>=3 && dig.includes(t.replace(/\D/g,''))));
+}
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const fmtSize = b => b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -425,6 +431,45 @@ function Painel({vendas, cfg, isAdmin, irPara}){
   </>;
 }
 
+/* ================= SELETOR DE CLIENTE (busca "contém") ================= */
+function ClientePicker({value, cadastro, extras, onChange, onPick, onCadastrar, autoFocus}){
+  const [aberto,setAberto]=useState(false); const [ix,setIx]=useState(0); const boxRef=useRef();
+  useEffect(()=>{ const h=e=>{ if(boxRef.current&&!boxRef.current.contains(e.target)) setAberto(false); }; document.addEventListener('mousedown',h); return ()=>document.removeEventListener('mousedown',h); },[]);
+  const nomesCad = new Set(cadastro.map(c=>normaliza(c.nome)));
+  const itens = useMemo(()=>{
+    const base = [...cadastro.map(c=>({c, nome:c.nome, sub:[c.razao&&c.razao!==c.nome?c.razao:'', c.doc, [c.cidade,c.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ')})),
+      ...extras.filter(n=>!nomesCad.has(normaliza(n))).map(n=>({c:null, nome:n, sub:'usado em vendas · não cadastrado'}))];
+    const f = base.filter(i=>casaBusca([i.nome, i.c?.razao, i.c?.doc, i.c?.contato], value));
+    const vq = normaliza(value);
+    f.sort((a,b)=>{ const pa=normaliza(a.nome).startsWith(vq)?0:1, pb=normaliza(b.nome).startsWith(vq)?0:1; return pa-pb || a.nome.localeCompare(b.nome); });
+    return f.slice(0,40);
+  },[value,cadastro,extras]);
+  useEffect(()=>setIx(0),[value]);
+  const realce = t => { const termos=normaliza(value).split(/\s+/).filter(Boolean); if(!termos.length) return t; const n=normaliza(t); const marks=new Array(t.length).fill(false);
+    termos.forEach(term=>{ let p=n.indexOf(term); while(p>=0){ for(let i=p;i<p+term.length;i++) marks[i]=true; p=n.indexOf(term,p+1);} });
+    const out=[]; let i=0; while(i<t.length){ const m=marks[i]; let j=i; while(j<t.length&&marks[j]===m) j++; out.push(m?<mark key={i} style={{background:'#ffe2bf',padding:0}}>{t.slice(i,j)}</mark>:t.slice(i,j)); i=j; } return out; };
+  function escolher(i){ onPick(i); setAberto(false); }
+  function tecla(e){
+    if(!aberto && (e.key==='ArrowDown')) { setAberto(true); return; }
+    if(!aberto) return;
+    if(e.key==='ArrowDown'){ e.preventDefault(); setIx(x=>Math.min(x+1,itens.length-1)); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); setIx(x=>Math.max(x-1,0)); }
+    else if(e.key==='Enter' && itens[ix]){ e.preventDefault(); escolher(itens[ix]); }
+    else if(e.key==='Escape'){ setAberto(false); }
+  }
+  return <div ref={boxRef} style={{position:'relative'}}>
+    <input className="f" value={value} autoFocus={autoFocus} autoComplete="off" placeholder="🔍 Digite parte do nome, razão social ou CNPJ…"
+      onFocus={()=>setAberto(true)} onKeyDown={tecla} onChange={e=>{onChange(e.target.value); setAberto(true);}}/>
+    {aberto && value.trim().length>0 && <div style={{position:'absolute',left:0,right:0,top:'100%',marginTop:4,background:'#fff',border:'1px solid var(--line)',borderRadius:10,boxShadow:'0 10px 30px rgba(0,0,0,.15)',zIndex:40,maxHeight:320,overflow:'auto'}}>
+      <div className="small muted" style={{padding:'6px 10px',borderBottom:'1px solid var(--line)'}}>{itens.length?`${itens.length}${itens.length===40?'+':''} cliente(s) encontrado(s)`:'Nenhum cliente encontrado'}</div>
+      {itens.map((i,k)=><div key={(i.c?.id||'x')+i.nome} onMouseDown={e=>{e.preventDefault();escolher(i);}} onMouseEnter={()=>setIx(k)}
+        style={{padding:'7px 10px',cursor:'pointer',background:k===ix?'var(--accent2)':'#fff',borderBottom:'1px solid #f3f4f7'}}>
+        <div style={{fontWeight:600}}>{realce(i.nome)}</div>{i.sub&&<div className="small muted">{realce(i.sub)}</div>}</div>)}
+      {onCadastrar && !nomesCad.has(normaliza(value)) && <div onMouseDown={e=>{e.preventDefault();onCadastrar();setAberto(false);}} style={{padding:'8px 10px',cursor:'pointer',color:'var(--blue)',fontWeight:600}}>＋ Cadastrar “{value.trim()}” como novo cliente</div>}
+    </div>}
+  </div>;
+}
+
 /* ================= FORMULÁRIO DE VENDA (entrada rápida) ================= */
 function VendaForm({inicial, precos, vendas, clientes:cadastro=[], cfg, isAdmin, onSalvar, onCancel, clienteInicial}){
   const bats = precos.filter(p=>p.categoria==='Bateria').sort((a,b)=>a.modelo.localeCompare(b.modelo));
@@ -436,11 +481,11 @@ function VendaForm({inicial, precos, vendas, clientes:cadastro=[], cfg, isAdmin,
     carregadorNome:'', carregador:0, bateria: bats[0]?.valor||0, venda:'', condPgto:'30/60/90', status:'aberto', obs:'' });
   const [v,setV] = useState(()=> inicial ? {...inicial} : novo());
   const set = (k,val) => setV(o=>({...o,[k]:val}));
-  const clientes = useMemo(()=>[...new Set([...cadastro.map(c=>c.nome), ...vendas.map(x=>x.cliente)].filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[vendas,cadastro]);
-  const cliSel = cadastro.find(c=>c.id===v.clienteId) || cadastro.find(c=>normaliza(c.nome)===normaliza(v.cliente));
+  const clientes = useMemo(()=>[...new Set(vendas.map(x=>x.cliente).filter(Boolean))],[vendas]);
+  const cliSel = cadastro.find(c=>c.id===v.clienteId) || (v.cliente.trim() ? cadastro.find(c=>normaliza(c.nome)===normaliza(v.cliente)) : null);
   const [nfFiles,setNfFiles] = useState([]); const nfRef = useRef();
   function escolheCliente(nome){ const c = cadastro.find(x=>normaliza(x.nome)===normaliza(nome)) || cadastro.find(x=>x.razao&&normaliza(x.razao)===normaliza(nome)) || cadastro.find(x=>x.doc&&x.doc.replace(/\D/g,'')===nome.replace(/\D/g,'')&&nome.replace(/\D/g,'').length>=11); setV(o=>({...o, cliente: c? c.nome : nome, clienteId: c? c.id : null})); }
-  async function cadastrarRapido(){ const n={id:uid(), nome:v.cliente.trim(), atualizadoEm:Date.now()}; await store.put('clientes', n); setV(o=>({...o, clienteId:n.id})); toast('Cliente cadastrado — complete os dados na aba Clientes'); }
+  async function cadastrarRapido(){ if(!v.cliente.trim()) return; const n={id:uid(), nome:v.cliente.trim(), atualizadoEm:Date.now()}; await store.put('clientes', n); setV(o=>({...o, clienteId:n.id})); toast('Cliente cadastrado — complete os dados na aba Clientes'); }
   const c = calc(v, cfg.imposto);
   const sug = precoSugerido(c.custoUn, cfg.metaMargem, cfg.imposto);
   const ultima = useMemo(()=>{ const k=chaveModelo(v.modelo); return vendas.filter(x=>chaveModelo(x.modelo)===k && x.id!==v.id).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; },[v.modelo,vendas]);
@@ -464,9 +509,10 @@ function VendaForm({inicial, precos, vendas, clientes:cadastro=[], cfg, isAdmin,
       <div>
         <div className="fg">
           <div><label className="lb">Data do pedido</label><input className="f" type="date" value={v.data} onChange={e=>set('data',e.target.value)}/></div>
-          <div className="c3"><label className="lb">Cliente</label><input className="f" list="dl-cli" value={v.cliente} onChange={e=>escolheCliente(e.target.value)} placeholder="Digite para buscar o cliente cadastrado…" autoFocus={!inicial&&!clienteInicial} autoComplete="off"/><datalist id="dl-cli">{clientes.map(x=>{ const c=cadastro.find(k=>k.nome===x); return <option key={x} value={x}>{c?[c.razao!==x?c.razao:'',c.doc,c.cidade].filter(Boolean).join(' · '):''}</option>; })}</datalist>
+          <div className="c3"><label className="lb">Cliente</label><ClientePicker value={v.cliente} cadastro={cadastro} extras={clientes} autoFocus={!inicial&&!clienteInicial}
+              onChange={t=>setV(o=>({...o, cliente:t, clienteId:null}))} onPick={i=>setV(o=>({...o, cliente:i.nome, clienteId:i.c?.id||null}))} onCadastrar={cadastrarRapido}/>
             {cliSel ? <div className="small" style={{marginTop:4,color:'var(--ok)'}}>✔ {[cliSel.razao&&cliSel.razao!==cliSel.nome?cliSel.razao:'', cliSel.doc, [cliSel.cidade,cliSel.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ')||'Cliente cadastrado'}</div>
-             : v.cliente.trim() ? <div className="small" style={{marginTop:4}}><span className="muted">Cliente não cadastrado · </span><a href="#" onClick={e=>{e.preventDefault();cadastrarRapido();}}>＋ cadastrar “{v.cliente.trim()}”</a></div> : null}</div>
+             : v.cliente.trim() ? <div className="small muted" style={{marginTop:4}}>Escolha um cliente da lista ou cadastre um novo</div> : null}</div>
           <div className="c2"><label className="lb">Modelo da bateria</label>
             <input className="f" list="dl-mod" value={v.modelo} onChange={e=>escolheModelo(e.target.value)} placeholder="Ex.: 24V230AH"/>
             <datalist id="dl-mod">{modelosLista.map(m=><option key={m} value={m}/>)}</datalist>
@@ -591,7 +637,7 @@ function Vendas({vendas, precos, clientes, docs, cfg, isAdmin, user, filtroInici
   const nAnexos = useMemo(()=>{ const m={}; docs.forEach(d=>{ if(d.vendaId) m[d.vendaId]=(m[d.vendaId]||0)+1; }); return m; },[docs]);
   const qn = normaliza(q);
   const lista = vendas.filter(v=>(st==='todos'||(st==='ok'?v.status==='ok':v.status!=='ok')) &&
-    (!qn || normaliza([v.cliente,v.modelo,v.condPgto,v.obs,v.nf,dataBR(v.data)].join(' ')).includes(qn)))
+    casaBusca([v.cliente,v.modelo,v.condPgto,v.obs,v.nf,dataBR(v.data)],q))
     .map(v=>({v,c:calc(v,cfg.imposto)}))
     .sort((a,b)=>{ const g=x=>({data:x.v.data||'',cliente:x.v.cliente||'',modelo:x.v.modelo||'',nf:x.v.nf||'',venda:x.c.venda,custo:x.c.custo,ll:x.c.lucroLiq,margem:x.c.margem}[ord.k]); const A=g(a),B=g(b); return (A>B?1:A<B?-1:(a.v.criadoEm||0)-(b.v.criadoEm||0))*ord.d; });
   const tot = lista.reduce((a,{c})=>({custo:a.custo+c.custo,venda:a.venda+c.venda,lb:a.lb+c.lucroBruto,ll:a.ll+c.lucroLiq,q:a.q+c.q}),{custo:0,venda:0,lb:0,ll:0,q:0});
@@ -693,7 +739,7 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
   const resumo = useMemo(()=>{ const m={}; vendas.forEach(v=>{ const key = v.clienteId || ('n:'+normaliza(v.cliente)); const c=calc(v,cfg.imposto); m[key]=m[key]||{q:0,venda:0,ult:''}; m[key].q+=c.q; m[key].venda+=c.venda; if((v.data||'')>m[key].ult) m[key].ult=v.data; }); return m; },[vendas,cfg]);
   const resDe = c => { const a=resumo[c.id], b=resumo['n:'+normaliza(c.nome)]; if(!a&&!b) return null; return {q:(a?.q||0)+(b?.q||0), venda:(a?.venda||0)+(b?.venda||0), ult:[a?.ult||'',b?.ult||''].sort().pop()}; };
   const qn=normaliza(q);
-  const lista = clientes.filter(c=>!qn||normaliza([c.nome,c.razao,c.doc,c.cidade,c.contato,c.telefone].join(' ')).includes(qn)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  const lista = clientes.filter(c=>casaBusca([c.nome,c.razao,c.doc,c.cidade,c.contato,c.telefone,c.email],q)).sort((a,b)=>a.nome.localeCompare(b.nome));
   async function salvar(c){ await store.put('clientes',{...c,id:c.id||uid(),atualizadoEm:Date.now()}); setEdit(null); toast('Cliente salvo'); }
   async function excluir(c){ if(confirm(`Excluir o cliente ${c.nome}? As vendas dele não são apagadas.`)){ await store.del('clientes',c.id); setEdit(null); } }
   async function lerArquivo(f){
@@ -712,7 +758,7 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
   async function confirmarImport(){ await store.putMany('clientes',[...imp.novos,...imp.atualiza].map(c=>({...c,atualizadoEm:Date.now()}))); toast(`${imp.novos.length} cliente(s) novo(s), ${imp.atualiza.length} atualizado(s)`); setImp(null); }
   return <>
     <div className="row" style={{marginBottom:14}}><div><h1>Clientes</h1><div className="sub" style={{margin:0}}>{clientes.length} cadastrado(s) — aparecem para seleção ao lançar uma venda</div></div><div className="sp"/>
-      <input className="f" style={{maxWidth:240}} placeholder="🔍 Nome, CNPJ, cidade…" value={q} onChange={e=>setQ(e.target.value)}/>
+      <input className="f" style={{maxWidth:240}} placeholder="🔍 Qualquer parte do nome, CNPJ, cidade…" value={q} onChange={e=>setQ(e.target.value)}/>
       <button className="btn" onClick={()=>ref.current.click()}>⬆ Importar planilha</button><input ref={ref} type="file" accept=".xlsx,.xls,.csv,.html,.htm" hidden onChange={e=>{e.target.files[0]&&lerArquivo(e.target.files[0]); e.target.value='';}}/>
       <button className="btn pri" onClick={()=>setEdit({nome:''})}>+ Novo cliente</button></div>
     {lista.length ? <div className="card desk" style={{padding:6}}><table className="tc"><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Telefone / e-mail</th><th>Cidade</th><th className="n">Baterias</th><th className="n">Comprado</th><th>Última</th><th/></tr></thead>
