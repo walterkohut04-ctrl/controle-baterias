@@ -19,6 +19,13 @@
 //     appId: "1:123456789:web:abc123"
 //   };
 //
-//  Depois cole o conteúdo de firestore.rules em Firestore > Regras.
+//  Depois cole o conteúdo de firestore.rules em Firestore > Regras
+//  (trocando o código de acesso pelo seu).
+//
+//  USAR_LOGIN = false  -> uso pessoal: entra com um código de acesso
+//                         (regras: firestore.rules)
+//  USAR_LOGIN = true   -> vários usuários com e-mail e senha
+//                         (ative Authentication > E-mail/senha e use firestore-login.rules)
 // ============================================================
 window.FIREBASE_CONFIG = null;
+window.USAR_LOGIN = false;

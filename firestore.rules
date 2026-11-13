@@ -1,55 +1,11 @@
 rules_version = '2';
-// Regras do Firestore — Controle de Baterias
-// Cole este conteúdo em Firebase Console > Firestore Database > Regras > Publicar
+// Regras do Firestore — Controle de Baterias (uso pessoal com código de acesso)
+// Troque TROQUE-PELO-SEU-CODIGO pelo seu código (o mesmo que vai digitar no sistema)
+// e cole em Firebase Console > Firestore Database > Regras > Publicar.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signed() { return request.auth != null; }
-    function userDoc() { return /databases/$(database)/documents/usuarios/$(request.auth.uid); }
-    function member() { return signed() && exists(userDoc()) && get(userDoc()).data.ativo == true; }
-    function admin() { return member() && get(userDoc()).data.papel == 'admin'; }
-    function bootstrapPath() { return /databases/$(database)/documents/config/bootstrap; }
-
-    // Usuários: só o administrador gerencia. O 1º administrador se cria uma única vez.
-    match /usuarios/{uid} {
-      allow read: if member() || (signed() && request.auth.uid == uid);
-      allow write: if admin();
-      allow create: if signed() && request.auth.uid == uid
-        && request.resource.data.papel == 'admin'
-        && !exists(bootstrapPath())
-        && existsAfter(bootstrapPath());
-    }
-
-    match /config/bootstrap {
-      allow read: if signed();
-      allow create: if signed() && !exists(bootstrapPath())
-        && request.resource.data.uid == request.auth.uid;
-    }
-
-    match /config/{doc} {
-      allow read: if member();
-      allow write: if admin();
-    }
-
-    // Tabela de preços: todos leem, só admin altera
-    match /precos/{id} {
-      allow read: if member();
-      allow write: if admin();
-    }
-
-    // Vendas: todos lançam; quem lançou ou o admin podem editar/excluir
-    match /vendas/{id} {
-      allow read, create: if member();
-      allow update, delete: if admin() || (member() && resource.data.criadoPor == request.auth.uid);
-    }
-
-    // Documentos das baterias (metadados + partes do arquivo)
-    match /documentos/{id} {
-      allow read, create: if member();
-      allow update, delete: if admin();
-    }
-    match /arquivos/{id} {
-      allow read, create: if member();
-      allow delete: if admin();
+    match /acesso/{codigo}/{documento=**} {
+      allow read, write: if codigo == 'TROQUE-PELO-SEU-CODIGO';
     }
   }
 }

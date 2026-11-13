@@ -130,7 +130,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 <script>
   if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
     document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>');
-    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>');
+    if (window.USAR_LOGIN === true) document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>');
     document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>');
   }
 </script>
@@ -209,6 +209,9 @@ function precoSugerido(custoUn, meta, imposto){ const d = 1 - meta/(1-imposto); 
 /* ================= CAMADA DE DADOS ================= */
 const CFG = window.FIREBASE_CONFIG;
 const CLOUD = !!(CFG && CFG.apiKey && window.firebase);
+// LOGIN = vários usuários com e-mail/senha (Firebase Authentication). Senão: modo de uso pessoal com código de acesso.
+const LOGIN = CLOUD && window.USAR_LOGIN === true;
+const CODIGO_MODE = CLOUD && !LOGIN;
 const CHUNK = 700000; // bytes por parte (Firestore aceita até ~1MB por documento)
 const MAX_FILE = 20*1024*1024;
 
@@ -240,30 +243,34 @@ const CloudStore = (() => {
   firebase.initializeApp(CFG);
   const fs = firebase.firestore();
   try { fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); } catch(e){}
+  let ACESSO = localStorage.getItem('cb-acesso') || '';
+  const col = c => CODIGO_MODE ? fs.collection('acesso').doc(ACESSO).collection(c) : fs.collection(c);
   const strip = o => { const {id, ...rest} = o; return JSON.parse(JSON.stringify(rest)); };
   const blobToB64 = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]||''); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
   const b64ToBytes = b64 => { const bin=atob(b64); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; };
   return {
     mode:'cloud', fs,
-    subscribe(c, cb){ return fs.collection(c).onSnapshot(s=>cb(s.docs.map(d=>({id:d.id, ...d.data()}))), e=>{ console.error(c,e); cb([]); }); },
-    put(c, obj){ return fs.collection(c).doc(obj.id).set(strip(obj)); },
-    async putMany(c, list){ for (let i=0;i<list.length;i+=400){ const b=fs.batch(); list.slice(i,i+400).forEach(o=>b.set(fs.collection(c).doc(o.id), strip(o))); await b.commit(); } },
-    del(c, id){ return fs.collection(c).doc(id).delete(); },
+    setAcesso(c){ ACESSO=c; },
+    async testar(c){ ACESSO=c; await col('config').doc('geral').get({source:'server'}); },
+    subscribe(c, cb){ return col(c).onSnapshot(s=>cb(s.docs.map(d=>({id:d.id, ...d.data()}))), e=>{ console.error(c,e); cb([]); }); },
+    put(c, obj){ return col(c).doc(obj.id).set(strip(obj)); },
+    async putMany(c, list){ for (let i=0;i<list.length;i+=400){ const b=fs.batch(); list.slice(i,i+400).forEach(o=>b.set(col(c).doc(o.id), strip(o))); await b.commit(); } },
+    del(c, id){ return col(c).doc(id).delete(); },
     async saveFile(meta, file, onProg){
       const n = Math.max(1, Math.ceil(file.size/CHUNK));
       for (let i=0;i<n;i++){
         const data = await blobToB64(file.slice(i*CHUNK,(i+1)*CHUNK));
-        await fs.collection('arquivos').doc(meta.id+'_'+i).set({doc:meta.id, i, data});
+        await col('arquivos').doc(meta.id+'_'+i).set({doc:meta.id, i, data});
         onProg && onProg((i+1)/n);
       }
       await this.put('documentos', {...meta, partes:n});
     },
     async getFile(meta){
       const parts = [];
-      for (let i=0;i<(meta.partes||1);i++){ const d = await fs.collection('arquivos').doc(meta.id+'_'+i).get(); if(!d.exists) throw new Error('Parte do arquivo não encontrada'); parts.push(b64ToBytes(d.data().data)); }
+      for (let i=0;i<(meta.partes||1);i++){ const d = await col('arquivos').doc(meta.id+'_'+i).get(); if(!d.exists) throw new Error('Parte do arquivo não encontrada'); parts.push(b64ToBytes(d.data().data)); }
       return new Blob(parts, {type: meta.mime||'application/octet-stream'});
     },
-    async delFile(meta){ await this.del('documentos', meta.id); for (let i=0;i<(meta.partes||1);i++) await fs.collection('arquivos').doc(meta.id+'_'+i).delete(); },
+    async delFile(meta){ await this.del('documentos', meta.id); for (let i=0;i<(meta.partes||1);i++) await col('arquivos').doc(meta.id+'_'+i).delete(); },
   };
 })();
 
@@ -781,7 +788,7 @@ function Config({cfg, vendas, precos, docs, isAdmin, onSeed}){
       <div className="c2" style={{alignSelf:'end'}}><button className="btn pri" onClick={salvar}>Salvar</button></div>
     </div><p className="small muted">Fórmulas iguais às da planilha: Custo = Indicador + Carregador + Bateria · Lucro s/ imposto = Venda − Custo · Lucro c/ imposto = Lucro × (1 − imposto) · Margem = Lucro c/ imposto ÷ Venda.</p></div>}
     <div className="card"><h2>Armazenamento</h2>
-      {CLOUD ? <p>☁️ <b>Modo nuvem (Firebase)</b> — dados compartilhados em tempo real entre todos os usuários. Projeto: <code>{CFG.projectId}</code></p>
+      {CLOUD ? <p>☁️ <b>Modo nuvem (Firebase)</b> — {LOGIN?'dados compartilhados em tempo real entre todos os usuários.':'uso pessoal protegido por código de acesso; os dados aparecem em qualquer aparelho em que você digitar o código.'} Projeto: <code>{CFG.projectId}</code></p>
       : <><p>💾 <b>Modo local</b> — os dados ficam salvos somente neste navegador/aparelho.</p><p className="small muted">Para dar acesso a outros usuários, configure o Firebase no arquivo <code>firebase-config.js</code> (passo a passo no README do repositório). Antes de trocar, faça um backup aqui e importe-o depois no modo nuvem.</p></>}
       <div className="small muted">{vendas.length} vendas · {precos.length} itens de preço · {docs.length} documentos</div>
     </div>
@@ -791,6 +798,25 @@ function Config({cfg, vendas, precos, docs, isAdmin, onSeed}){
       <button className="btn" onClick={onSeed}>Reimportar dados da planilha (aba Jun.)</button>
     </div><p className="small muted">O backup inclui vendas, preços e configurações. Os documentos anexados não entram no backup (ficam no armazenamento do sistema).</p></div>}
   </>;
+}
+
+/* ================= CÓDIGO DE ACESSO (uso pessoal) ================= */
+function CodigoAcesso({onOk}){
+  const [c,setC]=useState(''); const [erro,setErro]=useState(''); const [busy,setBusy]=useState(false);
+  async function go(e){
+    e.preventDefault(); setErro(''); setBusy(true);
+    try{ await CloudStore.testar(c.trim()); localStorage.setItem('cb-acesso', c.trim()); onOk(); }
+    catch(err){ CloudStore.setAcesso(''); setErro(err.code==='permission-denied' ? 'Código incorreto.' : 'Não foi possível conectar: '+err.message); }
+    setBusy(false);
+  }
+  return <div className="login"><form className="box" onSubmit={go}>
+    <div className="logo" style={{color:'var(--brand)',marginBottom:18}}><div className="ic">⚡</div>Controle de Baterias</div>
+    <label className="lb">Código de acesso</label>
+    <input className="f" type="password" required autoFocus value={c} onChange={e=>setC(e.target.value)} autoComplete="current-password"/>
+    {erro && <div className="small" style={{color:'var(--bad)',marginTop:8}}>{erro}</div>}
+    <button className="btn pri" style={{width:'100%',justifyContent:'center',marginTop:14}} disabled={busy}>{busy?'Verificando…':'Entrar'}</button>
+    <p className="small muted" style={{marginTop:12}}>O código fica salvo neste aparelho — só é pedido de novo se você clicar em “Sair”.</p>
+  </form></div>;
 }
 
 /* ================= APP ================= */
@@ -804,10 +830,11 @@ function InstallBtn(){
 }
 
 function App(){
-  const [authUser,setAuthUser]=useState(CLOUD?undefined:{uid:'local',nome:'Local',papel:'admin'});
-  const [perfil,setPerfil]=useState(CLOUD?undefined:{papel:'admin',nome:'Usuário local',ativo:true});
-  useEffect(()=>{ if(!CLOUD) return; return firebase.auth().onAuthStateChanged(async u=>{ setAuthUser(u||null); if(u){ try{ const d=await CloudStore.fs.collection('usuarios').doc(u.uid).get(); setPerfil(d.exists?{...d.data(),uid:u.uid}:null); }catch(e){ setPerfil(null); } } else setPerfil(undefined); }); },[]);
-  const liberado = !!(authUser && perfil && perfil.ativo);
+  const [authUser,setAuthUser]=useState(LOGIN?undefined:{uid:CLOUD?'walter':'local'});
+  const [acessoOk,setAcessoOk]=useState(!CODIGO_MODE || !!localStorage.getItem('cb-acesso'));
+  const [perfil,setPerfil]=useState(LOGIN?undefined:{papel:'admin',nome:CLOUD?'Uso pessoal':'Usuário local',ativo:true});
+  useEffect(()=>{ if(!LOGIN) return; return firebase.auth().onAuthStateChanged(async u=>{ setAuthUser(u||null); if(u){ try{ const d=await CloudStore.fs.collection('usuarios').doc(u.uid).get(); setPerfil(d.exists?{...d.data(),uid:u.uid}:null); }catch(e){ setPerfil(null); } } else setPerfil(undefined); }); },[]);
+  const liberado = !!(authUser && perfil && perfil.ativo && acessoOk);
   const vendasR = useCol('vendas', liberado), precosR = useCol('precos', liberado), cfgR = useCol('config', liberado), docsR = useCol('documentos', liberado);
   const [tab,setTab]=useState(()=>location.hash.slice(1)||'painel'); const [filtroV,setFiltroV]=useState(null); const [docModelo,setDocModelo]=useState(null);
   const [novaAberta,setNovaAberta]=useState(false);
@@ -827,6 +854,7 @@ function App(){
   // Primeiro uso no modo local: carrega a planilha automaticamente
   useEffect(()=>{ if(!CLOUD && vendasR && precosR && !vendasR.length && !precosR.length && !seededRef.current && !localStorage.getItem('cb-seeded')){ seededRef.current=true; localStorage.setItem('cb-seeded','1'); seed(false); } },[vendasR,precosR]);
 
+  if (CODIGO_MODE && !acessoOk) return <><CodigoAcesso onOk={()=>setAcessoOk(true)}/><Toaster/></>;
   if (CLOUD && authUser===undefined) return <div className="empty" style={{paddingTop:80}}>Carregando…</div>;
   if (CLOUD && !authUser) return <><Login/><Toaster/></>;
   if (CLOUD && perfil===undefined) return <div className="empty" style={{paddingTop:80}}>Carregando…</div>;
@@ -842,7 +870,7 @@ function App(){
   const tabs = [
     ['painel','Painel','📊'], ['vendas','Vendas','🧾'], ['nova','Nova venda','➕'],
     ...(isAdmin?[['precos','Preços','🏷️']]:[]), ['docs','Documentos','📎'],
-    ...(CLOUD&&isAdmin?[['usuarios','Usuários','👥']]:[]), ['config','Config.','⚙️'],
+    ...(LOGIN&&isAdmin?[['usuarios','Usuários','👥']]:[]), ['config','Config.','⚙️'],
   ];
   const irPara = (t,f) => { if(t==='vendas') setFiltroV(f||null); setTab(t); };
   const abrirDocs = m => { setDocModelo(m); setTab('docs'); };
@@ -853,7 +881,7 @@ function App(){
       <div className="logo"><div className="ic">⚡</div>Controle de Baterias</div>
       <nav className="nav">{tabs.map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}>{l}</button>)}</nav>
       <div className="sp"/>
-      <div className="who"><InstallBtn/><span className="nm">{perfil.nome}{isAdmin?' · admin':''}</span>{CLOUD&&<button onClick={()=>firebase.auth().signOut()}>Sair</button>}</div>
+      <div className="who"><InstallBtn/><span className="nm">{perfil.nome}{isAdmin?' · admin':''}</span>{LOGIN&&<button onClick={()=>firebase.auth().signOut()}>Sair</button>}{CODIGO_MODE&&<button title="Remove o código deste aparelho" onClick={()=>{ if(confirm('Sair deste aparelho? Será preciso digitar o código de acesso novamente.')){ localStorage.removeItem('cb-acesso'); location.reload(); } }}>Sair</button>}</div>
     </div></header>
     <main>
       {semCloudBanner && <div className="banner">💾 Modo local: os dados estão salvos só neste aparelho. Para liberar outros usuários, configure o Firebase (veja o README).<div className="sp"/><button className="btn sm" onClick={()=>{localStorage.setItem('cb-banner-ok','1'); setBannerOk(true);}}>Entendi</button></div>}
@@ -862,8 +890,8 @@ function App(){
       {tab==='nova' && <><h1>Nova venda</h1><div className="sub">Entrada rápida — custos preenchidos pela tabela de preços</div><div className="card"><VendaForm precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda}/></div></>}
       {tab==='precos' && isAdmin && <Precos precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin}/>}
       {tab==='docs' && <Documentos docs={docsR} precos={precosR} isAdmin={isAdmin} modeloInicial={docModelo}/>}
-      {tab==='usuarios' && CLOUD && isAdmin && <Usuarios me={user}/>}
-      {tab==='config' && CLOUD && isAdmin && <div className="mobonly" style={{marginBottom:12}}><button className="btn" onClick={()=>setTab('usuarios')}>👥 Gerenciar usuários</button></div>}
+      {tab==='usuarios' && LOGIN && isAdmin && <Usuarios me={user}/>}
+      {tab==='config' && LOGIN && isAdmin && <div className="mobonly" style={{marginBottom:12}}><button className="btn" onClick={()=>setTab('usuarios')}>👥 Gerenciar usuários</button></div>}
       {tab==='config' && <Config cfg={cfg} vendas={vendasR} precos={precosR} docs={docsR} isAdmin={isAdmin} onSeed={()=>seed(true)}/>}
       {CLOUD && isAdmin && !vendasR.length && !precosR.length && tab!=='config' && <div className="card row"><span>O banco está vazio.</span><div className="sp"/><button className="btn pri" onClick={()=>seed(false)}>Importar dados da planilha (aba Jun.)</button></div>}
     </main>

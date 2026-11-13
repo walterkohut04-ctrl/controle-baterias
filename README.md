@@ -33,25 +33,24 @@ Criado a partir da planilha `Baterias_Full.xlsx`, aba **Jun.** (17 vendas e a ta
 
 O sistema já funciona assim que é publicado, em **modo local**: os dados ficam salvos no navegador do aparelho em que você está.
 
-Para **dar acesso a outros usuários** (todos vendo os mesmos dados em tempo real), ative o **modo nuvem** com Firebase (plano gratuito Spark é suficiente — os documentos são guardados no próprio Firestore, sem precisar do Storage pago):
+Para usar em **qualquer aparelho** (celular e computador vendo os mesmos dados), ative o **modo nuvem** com Firebase (plano gratuito Spark; os documentos ficam no próprio Firestore).
 
+### Uso pessoal (código de acesso) — padrão
 1. Em https://console.firebase.google.com crie um projeto (ex.: `controle-baterias`).
-2. **Authentication** → *Começar* → ative **E-mail/senha**.
-3. **Firestore Database** → *Criar banco de dados* → modo produção → região `southamerica-east1` (São Paulo).
-4. **Firestore → Regras**: cole o conteúdo do arquivo [`firestore.rules`](firestore.rules) e publique.
-5. **Configurações do projeto → Seus apps → Web (`</>`)**: registre o app e copie o `firebaseConfig`.
-6. **Authentication → Configurações → Domínios autorizados**: adicione `walterkohut04-ctrl.github.io`.
-7. Edite [`firebase-config.js`](firebase-config.js) e troque `null` pelo objeto copiado.
-8. Abra o sistema → **Primeiro acesso (admin)** → crie sua conta de administrador (só funciona uma vez).
-9. Clique em **Importar dados da planilha** e depois cadastre os demais usuários em **Usuários**.
+2. **Firestore Database** → *Criar banco de dados* → região `southamerica-east1` (São Paulo) → modo produção.
+3. **Firestore → Regras**: cole [`firestore.rules`](firestore.rules), troque `TROQUE-PELO-SEU-CODIGO` pelo seu código de acesso e publique.
+4. **Configurações do projeto → Seus apps → Web (`</>`)**: registre o app e copie o `firebaseConfig` para [`firebase-config.js`](firebase-config.js).
+5. Abra o sistema, digite o código de acesso e clique em **Importar dados da planilha**.
 
-> Se já tiver lançado algo no modo local, use **Config. → Exportar backup** antes e **Importar backup** depois de ativar a nuvem. Documentos anexados no modo local precisam ser anexados de novo.
+O código fica salvo no aparelho; “Sair” remove-o daquele aparelho.
 
-### Perfis
-- **Administrador**: vê custos, lucros e margens; altera preços; gerencia usuários; edita/exclui qualquer venda e documento.
-- **Operador**: lança vendas (o custo é preenchido pela tabela, sem ele ver), vê valores de venda e usa/anexa documentos. Edita só as vendas que ele lançou.
-
----
+### Vários usuários (e-mail e senha) — quando quiser liberar para outras pessoas
+1. Ative **Authentication → E-mail/senha** e adicione `walterkohut04-ctrl.github.io` em *Domínios autorizados*.
+2. Use as regras de [`firestore-login.rules`](firestore-login.rules) e coloque `window.USAR_LOGIN = true` em `firebase-config.js`.
+3. No sistema: **Primeiro acesso (admin)** → depois cadastre os usuários na aba **Usuários**.
+   - **Administrador**: vê custos, lucros e margens; altera preços; gerencia usuários.
+   - **Operador**: lança vendas (custo preenchido pela tabela, sem ver), vê valores de venda e usa os documentos.
+   (Os dados do modo código não passam automaticamente: use Config. → Exportar/Importar backup.)
 
 ## Instalar como app
 - **Android/Chrome**: botão **📲 Instalar app** no topo.
@@ -60,5 +59,6 @@ Para **dar acesso a outros usuários** (todos vendo os mesmos dados em tempo rea
 ## Arquivos
 - `index.html` — o sistema completo (React + Firebase, arquivo único)
 - `firebase-config.js` — chave do Firebase (modo nuvem)
-- `firestore.rules` — regras de segurança do banco
+- `firestore.rules` — regras do banco (uso pessoal com código)
+- `firestore-login.rules` — regras do banco (vários usuários)
 - `manifest.webmanifest`, `sw.js`, `icons/` — app instalável (PWA)
