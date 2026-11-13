@@ -21,16 +21,17 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 .top{background:var(--brand);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.topin{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px}
+.topin{max-width:1440px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;white-space:nowrap}
 .logo .ic{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:16px}
-.nav{display:flex;gap:4px;flex:1;overflow-x:auto}
-.nav button{background:none;border:0;color:#c9d3e8;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.nav{display:flex;gap:2px;flex:1;min-width:0;justify-content:center}
+.nav .ni{margin-right:6px}
+.nav button{background:none;border:0;color:#c9d3e8;padding:8px 11px;display:flex;align-items:center;border-radius:8px;cursor:pointer;white-space:nowrap}
 .nav button.on{background:rgba(255,255,255,.14);color:#fff}
 .nav button:hover{color:#fff}
 .who{font-size:12px;color:#c9d3e8;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .who button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:6px;padding:5px 9px;cursor:pointer}
-main{max-width:1240px;margin:0 auto;padding:18px 16px 96px}
+main{max-width:1440px;margin:0 auto;padding:18px 16px 96px}
 h1{font-size:20px;margin:0 0 4px} h2{font-size:16px;margin:0 0 10px} h3{font-size:14px;margin:0 0 8px}
 .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:16px}
@@ -54,7 +55,9 @@ input.f,select.f,textarea.f{width:100%;border:1px solid var(--line);background:#
 input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
 label.lb{display:block;font-size:12px;color:var(--ink2);margin-bottom:4px;font-weight:600}
 .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.fg .c2{grid-column:span 2} .fg .c4{grid-column:1/-1}
+.fg .c2{grid-column:span 2} .fg .c3{grid-column:span 3} .fg .c4{grid-column:1/-1}
+table.tv td,table.tv th{padding:8px 6px} table.tv td{font-size:13px} table.tv td:not(:nth-child(3)){white-space:nowrap}
+@media (max-width:1250px){ .nav .nl{display:none} .nav .ni{margin:0;font-size:18px} .nav button{padding:8px 12px} }
 table{width:100%;border-collapse:collapse}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:600}
 td{padding:9px 8px;border-bottom:1px solid #f0f2f6;vertical-align:middle;font-variant-numeric:tabular-nums}
@@ -107,7 +110,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 @media (max-width:900px){
   .kpis{grid-template-columns:repeat(2,1fr)} .kpis .kpi:last-child{grid-column:1/-1}
   .two{grid-template-columns:1fr}
-  .fg{grid-template-columns:1fr 1fr} .fg .c2{grid-column:1/-1}
+  .fg{grid-template-columns:1fr 1fr} .fg .c2,.fg .c3{grid-column:1/-1}
   .nav,.who .nm{display:none}
   .bnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);z-index:30;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
   .bnav button{flex:1;background:none;border:0;padding:6px 2px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
@@ -183,6 +186,7 @@ const pct = v => isFinite(v) ? (v*100).toLocaleString('pt-BR',{minimumFractionDi
 const num = v => { if (typeof v==='number') return v; if(!v) return 0; const s=String(v).trim(); const n = s.includes(',') ? Number(s.replace(/\./g,'').replace(',','.')) : Number(s); return isFinite(n)?n:0; };
 const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
 const dataBR = s => s ? s.split('-').reverse().join('/') : '';
+const normaliza = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const fmtSize = b => b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -214,10 +218,10 @@ const CHUNK = 700000; // bytes por parte (Firestore aceita até ~1MB por documen
 const MAX_FILE = 20*1024*1024;
 
 const LocalStore = (() => {
-  const STORES = ['vendas','precos','config','documentos','arquivos'];
+  const STORES = ['vendas','precos','config','documentos','arquivos','clientes'];
   let dbp; const subs = {};
   const open = () => dbp || (dbp = new Promise((res,rej)=>{
-    const r = indexedDB.open('controle-baterias',1);
+    const r = indexedDB.open('controle-baterias',2);
     r.onupgradeneeded = () => { const d=r.result; STORES.forEach(s=>{ if(!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); }); };
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
   }));
@@ -422,17 +426,21 @@ function Painel({vendas, cfg, isAdmin, irPara}){
 }
 
 /* ================= FORMULÁRIO DE VENDA (entrada rápida) ================= */
-function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
+function VendaForm({inicial, precos, vendas, clientes:cadastro=[], cfg, isAdmin, onSalvar, onCancel, clienteInicial}){
   const bats = precos.filter(p=>p.categoria==='Bateria').sort((a,b)=>a.modelo.localeCompare(b.modelo));
   const cars = precos.filter(p=>p.categoria==='Carregador');
   const inds = precos.filter(p=>p.categoria==='Indicador');
   const precoDe = (lista, nome) => { const k=chaveModelo(nome); const p = lista.find(x=>x.modelo===nome) || lista.find(x=>chaveModelo(x.modelo)===k); return p? p.valor : 0; };
-  const novo = () => ({ data:hoje(), cliente:'', modelo:bats[0]?.modelo||'', qtd:1,
+  const novo = () => ({ data:hoje(), nf:'', cliente:clienteInicial?.nome||'', clienteId:clienteInicial?.id||null, modelo:bats[0]?.modelo||'', qtd:1,
     indicadorNome: inds[0]?.modelo||'', indicador: inds[0]?.valor||0,
     carregadorNome:'', carregador:0, bateria: bats[0]?.valor||0, venda:'', condPgto:'30/60/90', status:'aberto', obs:'' });
   const [v,setV] = useState(()=> inicial ? {...inicial} : novo());
   const set = (k,val) => setV(o=>({...o,[k]:val}));
-  const clientes = useMemo(()=>[...new Set(vendas.map(x=>x.cliente).filter(Boolean))].sort(),[vendas]);
+  const clientes = useMemo(()=>[...new Set([...cadastro.map(c=>c.nome), ...vendas.map(x=>x.cliente)].filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[vendas,cadastro]);
+  const cliSel = cadastro.find(c=>c.id===v.clienteId) || cadastro.find(c=>normaliza(c.nome)===normaliza(v.cliente));
+  const [nfFiles,setNfFiles] = useState([]); const nfRef = useRef();
+  function escolheCliente(nome){ const c = cadastro.find(x=>normaliza(x.nome)===normaliza(nome)) || cadastro.find(x=>x.razao&&normaliza(x.razao)===normaliza(nome)) || cadastro.find(x=>x.doc&&x.doc.replace(/\D/g,'')===nome.replace(/\D/g,'')&&nome.replace(/\D/g,'').length>=11); setV(o=>({...o, cliente: c? c.nome : nome, clienteId: c? c.id : null})); }
+  async function cadastrarRapido(){ const n={id:uid(), nome:v.cliente.trim(), atualizadoEm:Date.now()}; await store.put('clientes', n); setV(o=>({...o, clienteId:n.id})); toast('Cliente cadastrado — complete os dados na aba Clientes'); }
   const c = calc(v, cfg.imposto);
   const sug = precoSugerido(c.custoUn, cfg.metaMargem, cfg.imposto);
   const ultima = useMemo(()=>{ const k=chaveModelo(v.modelo); return vendas.filter(x=>chaveModelo(x.modelo)===k && x.id!==v.id).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; },[v.modelo,vendas]);
@@ -445,8 +453,9 @@ function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
     if(!v.cliente.trim()) return toast('Informe o cliente');
     if(!v.modelo.trim()) return toast('Informe o modelo da bateria');
     if(!num(v.venda)) return toast('Informe o valor de venda');
-    onSalvar({...v, valorRecebido: v.status==='ok' && v.valorRecebido!=='' && v.valorRecebido!=null ? num(v.valorRecebido) : null, dataRecebimento: v.status==='ok' ? (v.dataRecebimento||hoje()) : null, cliente:v.cliente.trim(), qtd:Math.max(1,num(v.qtd)||1), indicador:num(v.indicador), carregador:num(v.carregador), bateria:num(v.bateria), venda:num(v.venda)}, continuar);
-    if (continuar) setV(o=>({...novo(), data:o.data, cliente:o.cliente, condPgto:o.condPgto}));
+    onSalvar({...v, nf:String(v.nf||'').trim(), clienteId: cliSel?.id || null, valorRecebido: v.status==='ok' && v.valorRecebido!=='' && v.valorRecebido!=null ? num(v.valorRecebido) : null, dataRecebimento: v.status==='ok' ? (v.dataRecebimento||hoje()) : null, cliente:v.cliente.trim(), qtd:Math.max(1,num(v.qtd)||1), indicador:num(v.indicador), carregador:num(v.carregador), bateria:num(v.bateria), venda:num(v.venda)}, continuar, nfFiles);
+    setNfFiles([]);
+    if (continuar) setV(o=>({...novo(), data:o.data, cliente:o.cliente, clienteId:o.clienteId, condPgto:o.condPgto}));
   }
   const modelosLista = [...new Set([...bats.map(b=>b.modelo), ...(v.modelo&&!bats.some(b=>b.modelo===v.modelo)?[v.modelo]:[])])];
 
@@ -455,13 +464,18 @@ function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
       <div>
         <div className="fg">
           <div><label className="lb">Data do pedido</label><input className="f" type="date" value={v.data} onChange={e=>set('data',e.target.value)}/></div>
-          <div className="c2"><label className="lb">Cliente</label><input className="f" list="dl-cli" value={v.cliente} onChange={e=>set('cliente',e.target.value)} placeholder="Nome do cliente" autoFocus={!inicial}/><datalist id="dl-cli">{clientes.map(x=><option key={x} value={x}/>)}</datalist></div>
-          <div><label className="lb">Quantidade</label><input className="f" type="number" min="1" value={v.qtd} onChange={e=>set('qtd',e.target.value)}/></div>
+          <div className="c3"><label className="lb">Cliente</label><input className="f" list="dl-cli" value={v.cliente} onChange={e=>escolheCliente(e.target.value)} placeholder="Digite para buscar o cliente cadastrado…" autoFocus={!inicial&&!clienteInicial} autoComplete="off"/><datalist id="dl-cli">{clientes.map(x=>{ const c=cadastro.find(k=>k.nome===x); return <option key={x} value={x}>{c?[c.razao!==x?c.razao:'',c.doc,c.cidade].filter(Boolean).join(' · '):''}</option>; })}</datalist>
+            {cliSel ? <div className="small" style={{marginTop:4,color:'var(--ok)'}}>✔ {[cliSel.razao&&cliSel.razao!==cliSel.nome?cliSel.razao:'', cliSel.doc, [cliSel.cidade,cliSel.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ')||'Cliente cadastrado'}</div>
+             : v.cliente.trim() ? <div className="small" style={{marginTop:4}}><span className="muted">Cliente não cadastrado · </span><a href="#" onClick={e=>{e.preventDefault();cadastrarRapido();}}>＋ cadastrar “{v.cliente.trim()}”</a></div> : null}</div>
           <div className="c2"><label className="lb">Modelo da bateria</label>
             <input className="f" list="dl-mod" value={v.modelo} onChange={e=>escolheModelo(e.target.value)} placeholder="Ex.: 24V230AH"/>
             <datalist id="dl-mod">{modelosLista.map(m=><option key={m} value={m}/>)}</datalist>
             <div className="chips" style={{marginTop:6}}>{bats.map(b=><button type="button" key={b.id} className={'chip'+(chaveModelo(v.modelo)===chaveModelo(b.modelo)?' on':'')} onClick={()=>escolheModelo(b.modelo)}>{b.modelo}</button>)}</div>
           </div>
+          <div><label className="lb">Quantidade</label><input className="f" type="number" min="1" value={v.qtd} onChange={e=>set('qtd',e.target.value)}/></div>
+          <div><label className="lb">Nº da NF</label><input className="f" value={v.nf||''} onChange={e=>set('nf',e.target.value)} placeholder="Ex.: 1234" inputMode="numeric"/>
+            <div className="small" style={{marginTop:5}}><a href="#" onClick={e=>{e.preventDefault();nfRef.current.click();}}>📎 {nfFiles.length?`${nfFiles.length} arquivo(s)`:'Anexar NF'}</a>{nfFiles.length>0&&<a href="#" className="muted" style={{marginLeft:6}} onClick={e=>{e.preventDefault();setNfFiles([]);}}>✕</a>}</div>
+            <input ref={nfRef} type="file" multiple hidden onChange={e=>{setNfFiles([...e.target.files]); e.target.value='';}}/></div>
           <div className="c2"><label className="lb">Valor de venda (unitário)</label><Money value={v.venda} onChange={x=>set('venda',x)} placeholder="0,00" style={{fontSize:18,fontWeight:700}}/>
             {isAdmin && isFinite(sug) && <div className="small" style={{marginTop:5}}>Sugerido p/ margem {pct(cfg.metaMargem)}: <a href="#" onClick={e=>{e.preventDefault();set('venda',Math.ceil(sug/50)*50);}}><b>{brl(Math.ceil(sug/50)*50)}</b></a></div>}
             {isAdmin && num(v.venda)>0 && <div className="mobonly small" style={{marginTop:4}}>Lucro líq. <b>{brl(c.lucroLiq)}</b> · Margem <b className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</b></div>}
@@ -509,23 +523,85 @@ function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
   </form>;
 }
 
+/* ================= ARQUIVOS (helpers) ================= */
+async function anexarArquivos(files, metaBase, onProg){
+  let n=0;
+  for (const f of files){
+    if (f.size>MAX_FILE){ toast(`${f.name} passa de ${fmtSize(MAX_FILE)} e foi ignorado`); continue; }
+    const meta = {id:uid(), nome:f.name, mime:f.type||'application/octet-stream', tamanho:f.size, criadoEm:Date.now(), modelos:[], ...metaBase};
+    await store.saveFile(meta, f, onProg); n++;
+  }
+  return n;
+}
+async function arquivoDe(d){ const b = await store.getFile(d); if(!b) throw new Error('Arquivo não encontrado'); return new File([b], d.nome, {type:d.mime}); }
+function baixarFile(f){ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
+async function compartilharArquivos(list, titulo, texto){
+  try{
+    const files=[]; for (const d of list) files.push(await arquivoDe(d));
+    if (navigator.canShare && navigator.canShare({files})) { await navigator.share({files, title:titulo, text:texto}); return; }
+    files.forEach(baixarFile);
+    toast('Arquivos baixados — anexe-os no e-mail que vai abrir');
+    setTimeout(()=>{ location.href=`mailto:?subject=${encodeURIComponent(titulo)}&body=${encodeURIComponent(texto+'\n\n(arquivos em anexo)')}`; },800);
+  }catch(e){ if(e.name!=='AbortError') toast('Não foi possível compartilhar: '+e.message); }
+}
+
+/* ================= NF DA VENDA (anexos) ================= */
+function NFModal({venda, docs, isAdmin, onClose, onDocsModelo}){
+  const lista = docs.filter(d=>d.vendaId===venda.id).sort((a,b)=>(a.criadoEm||0)-(b.criadoEm||0));
+  const ref = useRef(); const [busy,setBusy]=useState(null); const [prev,setPrev]=useState(null);
+  async function enviar(files){
+    files=[...files]; if(!files.length) return; setBusy(0);
+    try{ const n = await anexarArquivos(files, {tipo:'Nota fiscal', vendaId:venda.id, modelos:[venda.modelo], nf:venda.nf||'', cliente:venda.cliente}, p=>setBusy(p)); if(n) toast('NF anexada ✔'); }
+    catch(e){ toast('Erro ao anexar: '+e.message); }
+    setBusy(null);
+  }
+  async function ver(d){ setBusy(.5); try{ const f=await arquivoDe(d); setPrev({d,url:URL.createObjectURL(f)}); }catch(e){ toast(e.message); } setBusy(null); }
+  async function excluir(d){ if(confirm(`Excluir o anexo "${d.nome}"?`)){ await store.delFile(d); toast('Anexo excluído'); } }
+  const texto = `Segue a NF${venda.nf?' nº '+venda.nf:''} referente à bateria ${venda.modelo}${venda.qtd>1?` (${venda.qtd} un.)`:''}.`;
+  return <Modal title={`📎 NF da venda — ${venda.cliente}`} onClose={onClose}>
+    <div className="small muted" style={{marginBottom:12}}>{dataBR(venda.data)} · {venda.modelo}{venda.qtd>1?` × ${venda.qtd}`:''} · NF nº <b style={{color:'var(--ink)'}}>{venda.nf||'— (não informado)'}</b></div>
+    {lista.length ? <div style={{display:'grid',gap:8,marginBottom:12}}>{lista.map(d=>{ const [lbl,cor]=corTipo(d.mime,d.nome);
+      return <div key={d.id} className="row" style={{border:'1px solid var(--line)',borderRadius:10,padding:'8px 10px',gap:10,flexWrap:'nowrap'}}>
+        <div className="fi" style={{background:cor,width:34,height:38,borderRadius:6,display:'grid',placeItems:'center',color:'#fff',fontSize:10,fontWeight:700,flex:'none'}}>{lbl}</div>
+        <div style={{minWidth:0,flex:1}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.nome}</div><div className="small muted">{fmtSize(d.tamanho||0)} · {new Date(d.criadoEm).toLocaleDateString('pt-BR')}</div></div>
+        <button className="btn sm" onClick={()=>ver(d)}>👁</button>
+        <button className="btn sm" onClick={async()=>baixarFile(await arquivoDe(d))}>⬇</button>
+        <button className="btn sm pri" onClick={()=>compartilharArquivos([d], `NF ${venda.nf||''} – ${venda.cliente}`, texto)}>📤</button>
+        {isAdmin && <button className="ib" onClick={()=>excluir(d)}>🗑️</button>}
+      </div>; })}</div>
+    : <div className="empty" style={{padding:16}}>Nenhuma NF anexada a esta venda.</div>}
+    <div className="drop" onClick={()=>ref.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();enviar(e.dataTransfer.files);}}>📎 Clique ou arraste aqui o PDF/XML/foto da NF</div>
+    <input ref={ref} type="file" multiple hidden onChange={e=>{enviar(e.target.files); e.target.value='';}}/>
+    {busy!=null && <div className="prog" style={{marginTop:10}}><i style={{width:(busy*100)+'%'}}/></div>}
+    <div className="row" style={{marginTop:14}}>
+      <a href="#" className="small" onClick={e=>{e.preventDefault();onDocsModelo(venda.modelo);}}>📄 Ficha técnica / documentos da bateria {venda.modelo} →</a><div className="sp"/>
+      {lista.length>1 && <button className="btn sm pri" onClick={()=>compartilharArquivos(lista, `NF ${venda.nf||''} – ${venda.cliente}`, texto)}>📤 Enviar todos</button>}
+    </div>
+    {prev && <Modal title={prev.d.nome} wide onClose={()=>{URL.revokeObjectURL(prev.url);setPrev(null);}}>
+      {/^image\//.test(prev.d.mime) ? <img src={prev.url} style={{maxWidth:'100%'}}/> : prev.d.mime==='application/pdf' ? <iframe src={prev.url} style={{width:'100%',height:'70vh',border:0}}/> : <div className="empty">Pré-visualização indisponível. Use ⬇ para baixar.</div>}
+    </Modal>}
+  </Modal>;
+}
+
 /* ================= LISTA DE VENDAS ================= */
-function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
-  const [q,setQ]=useState(''); const [st,setSt]=useState(filtroInicial||'todos'); const [edit,setEdit]=useState(null);
+function Vendas({vendas, precos, clientes, docs, cfg, isAdmin, user, filtroInicial, onDocs}){
+  const [q,setQ]=useState(''); const [st,setSt]=useState(filtroInicial||'todos'); const [edit,setEdit]=useState(null); const [nfDe,setNfDe]=useState(null);
   const [ord,setOrd]=useState({k:'data',d:-1});
   useEffect(()=>{ if(filtroInicial) setSt(filtroInicial); },[filtroInicial]);
+  const nAnexos = useMemo(()=>{ const m={}; docs.forEach(d=>{ if(d.vendaId) m[d.vendaId]=(m[d.vendaId]||0)+1; }); return m; },[docs]);
+  const qn = normaliza(q);
   const lista = vendas.filter(v=>(st==='todos'||(st==='ok'?v.status==='ok':v.status!=='ok')) &&
-    (!q || [v.cliente,v.modelo,v.condPgto,v.obs,dataBR(v.data)].join(' ').toLowerCase().includes(q.toLowerCase())))
+    (!qn || normaliza([v.cliente,v.modelo,v.condPgto,v.obs,v.nf,dataBR(v.data)].join(' ')).includes(qn)))
     .map(v=>({v,c:calc(v,cfg.imposto)}))
-    .sort((a,b)=>{ const g=x=>({data:x.v.data||'',cliente:x.v.cliente||'',modelo:x.v.modelo||'',venda:x.c.venda,custo:x.c.custo,ll:x.c.lucroLiq,margem:x.c.margem}[ord.k]); const A=g(a),B=g(b); return (A>B?1:A<B?-1:(a.v.criadoEm||0)-(b.v.criadoEm||0))*ord.d; });
+    .sort((a,b)=>{ const g=x=>({data:x.v.data||'',cliente:x.v.cliente||'',modelo:x.v.modelo||'',nf:x.v.nf||'',venda:x.c.venda,custo:x.c.custo,ll:x.c.lucroLiq,margem:x.c.margem}[ord.k]); const A=g(a),B=g(b); return (A>B?1:A<B?-1:(a.v.criadoEm||0)-(b.v.criadoEm||0))*ord.d; });
   const tot = lista.reduce((a,{c})=>({custo:a.custo+c.custo,venda:a.venda+c.venda,lb:a.lb+c.lucroBruto,ll:a.ll+c.lucroLiq,q:a.q+c.q}),{custo:0,venda:0,lb:0,ll:0,q:0});
   const podeEditar = v => isAdmin || v.criadoPor===user?.uid;
   const Th = ({k,children,n}) => <th className={n?'n':''} style={{cursor:'pointer'}} onClick={()=>setOrd(o=>({k,d:o.k===k?-o.d:-1}))}>{children}{ord.k===k?(ord.d>0?' ▲':' ▼'):''}</th>;
   async function toggle(v){ if(!podeEditar(v)) return; const rec=v.status!=='ok'; await store.put('vendas',{...v,status:rec?'ok':'aberto',dataRecebimento:rec?hoje():null,valorRecebido:rec?(v.valorRecebido??null):null}); toast(rec?'Comissão marcada como recebida ✅ — venda finalizada':'Voltou para a receber ⏳'); }
   async function excluir(v){ if(confirm(`Excluir a venda de ${v.cliente} (${v.modelo}, ${dataBR(v.data)})?`)){ await store.del('vendas',v.id); toast('Venda excluída'); } }
-  async function duplicar(v){ const n={...v,id:uid(),data:hoje(),status:'aberto',criadoEm:Date.now(),criadoPor:user?.uid||null,obs:''}; await store.put('vendas',n); toast('Venda duplicada com a data de hoje'); }
+  async function duplicar(v){ const n={...v,id:uid(),data:hoje(),status:'aberto',dataRecebimento:null,valorRecebido:null,nf:'',criadoEm:Date.now(),criadoPor:user?.uid||null,obs:''}; await store.put('vendas',n); toast('Venda duplicada com a data de hoje'); }
   function exportar(){
-    const rows = lista.map(({v,c})=>({ 'Data Pedido':dataBR(v.data), 'Cliente':v.cliente, 'Modelo bateria':v.modelo, 'Qtd':c.q,
+    const rows = lista.map(({v,c})=>({ 'Data Pedido':dataBR(v.data), 'Nº NF':v.nf||'', 'Cliente':v.cliente, 'Modelo bateria':v.modelo, 'Qtd':c.q,
       ...(isAdmin?{'Indicador':num(v.indicador),'Carregador':num(v.carregador),'Bateria':num(v.bateria),'Custo Tecnopemt':c.custo}:{}),
       'Valor da Venda':c.venda, ...(isAdmin?{'Lucro S/ imposto':c.lucroBruto,[`Lucro C/ Imposto de ${Math.round(cfg.imposto*100)}%`]:c.lucroLiq,'Margem de Lucro':isFinite(c.margem)?c.margem:''}:{}),
       'Cond. Pgto':v.condPgto, 'Comissão':v.status==='ok'?'Recebida':'A receber', 'Recebido em':dataBR(v.dataRecebimento), ...(isAdmin?{'Valor comissão':comissao(v,cfg.imposto)[v.status==='ok'?'recebida':'aReceber']}:{}), 'Obs':v.obs||'' }));
@@ -534,40 +610,126 @@ function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
     if (isAdmin) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(precos.map(p=>({Categoria:p.categoria,Modelo:p.modelo,'Valor Antigo':p.valorAntigo,'Valor Atual':p.valor}))), 'Preços');
     XLSX.writeFile(wb, `vendas-baterias-${hoje()}.xlsx`);
   }
+  const Pill = ({v}) => <button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0,cursor:podeEditar(v)?'pointer':'default'}} onClick={e=>{e.stopPropagation();toggle(v);}} title={v.status==='ok'?`Comissão recebida em ${dataBR(v.dataRecebimento)||'—'} — clique para voltar a "a receber"`:'Clique quando receber a comissão'}>{v.status==='ok'?'✅ Recebido':'⏳ A receber'}</button>;
+  const Clip = ({v}) => <button className="ib" title={nAnexos[v.id]?`${nAnexos[v.id]} anexo(s) de NF`:'Anexar NF'} onClick={e=>{e.stopPropagation();setNfDe(v);}} style={{position:'relative',opacity:nAnexos[v.id]?1:.45}}>📎{nAnexos[v.id]>0&&<span style={{position:'absolute',top:-2,right:-3,background:'var(--accent)',color:'#fff',borderRadius:9,fontSize:9,padding:'0 4px',fontWeight:700}}>{nAnexos[v.id]}</span>}</button>;
   return <>
     <div className="row" style={{marginBottom:14}}>
       <div><h1>Vendas</h1><div className="sub" style={{margin:0}}>{lista.length} lançamento(s) · {tot.q} bateria(s){isAdmin&&<> · a receber <b style={{color:'var(--warn)'}}>{brl(lista.reduce((a,{v})=>a+comissao(v,cfg.imposto).aReceber,0))}</b></>}</div></div><div className="sp"/>
-      <input className="f" style={{maxWidth:240}} placeholder="Buscar cliente, modelo…" value={q} onChange={e=>setQ(e.target.value)}/>
+      <input className="f" style={{maxWidth:260}} placeholder="🔍 Cliente, modelo ou nº da NF…" value={q} onChange={e=>setQ(e.target.value)}/>
       <div className="chips">{[['todos','Todas'],['aberto','⏳ A receber'],['ok','✅ Recebidas']].map(([k,l])=><button key={k} className={'chip'+(st===k?' on':'')} onClick={()=>setSt(k)}>{l}</button>)}</div>
       <button className="btn" onClick={exportar}>⬇ Excel</button>
     </div>
-    <div className="card desk" style={{padding:6}}><div className="scroll"><table>
-      <thead><tr><th></th><Th k="data">Data</Th><Th k="cliente">Cliente</Th><Th k="modelo">Modelo</Th><th className="n">Qtd</th>
-        {isAdmin&&<><th className="n">Indicador</th><th className="n">Carregador</th><th className="n">Bateria</th><Th k="custo" n>Custo</Th></>}
-        <Th k="venda" n>Venda</Th>{isAdmin&&<><th className="n">Lucro s/ imp.</th><Th k="ll" n>Lucro c/ imp.</Th><Th k="margem" n>Margem</Th></>}<th>Pgto</th><th></th></tr></thead>
+    <div className="card desk" style={{padding:6}}><table className="tv">
+      <thead><tr><th>Comissão</th><Th k="data">Data</Th><Th k="cliente">Cliente</Th><Th k="nf">NF</Th><Th k="modelo">Modelo</Th><th className="n">Qtd</th>
+        {isAdmin&&<Th k="custo" n>Custo</Th>}<Th k="venda" n>Venda</Th>{isAdmin&&<><Th k="ll" n>Lucro c/ imp.</Th><Th k="margem" n>Margem</Th></>}<th>Pgto</th><th></th></tr></thead>
       <tbody>{lista.map(({v,c})=><tr key={v.id}>
-        <td><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0,cursor:podeEditar(v)?'pointer':'default'}} onClick={()=>toggle(v)} title={v.status==='ok'?`Comissão recebida em ${dataBR(v.dataRecebimento)||'—'} — clique para voltar a "a receber"`:'Clique quando receber a comissão'}>{v.status==='ok'?'✅ Recebido':'⏳ A receber'}</button>{v.status==='ok'&&v.dataRecebimento&&<div className="small muted" style={{marginTop:2}}>{dataBR(v.dataRecebimento)}</div>}</td>
-        <td>{dataBR(v.data)}</td><td><b>{v.cliente}</b>{v.obs&&<div className="small muted" title={v.obs} style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.obs}</div>}</td><td>{v.modelo}</td><td className="n">{c.q}</td>
-        {isAdmin&&<><td className="n">{brl(v.indicador)}</td><td className="n">{brl(v.carregador)}</td><td className="n">{brl(v.bateria)}</td><td className="n">{brl(c.custo)}</td></>}
+        <td><Pill v={v}/>{v.status==='ok'&&v.dataRecebimento&&<div className="small muted" style={{marginTop:2}}>{dataBR(v.dataRecebimento)}</div>}</td>
+        <td>{dataBR(v.data)}</td>
+        <td title={v.obs||''}><b>{v.cliente}</b></td>
+        <td>{v.nf||<span className="muted">—</span>}</td>
+        <td>{v.modelo}</td><td className="n">{c.q}</td>
+        {isAdmin&&<td className="n" title={`Indicador ${brl(v.indicador)}\nCarregador ${brl(v.carregador)}\nBateria ${brl(v.bateria)}`}>{brl(c.custo)}</td>}
         <td className="n"><b>{brl(c.venda)}</b></td>
-        {isAdmin&&<><td className="n">{brl(c.lucroBruto)}</td><td className="n">{brl(c.lucroLiq)}</td><td className={'n '+margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</td></>}
-        <td style={{whiteSpace:'nowrap'}}>{v.condPgto}</td>
+        {isAdmin&&<><td className="n" title={`Lucro s/ imposto ${brl(c.lucroBruto)}`}>{brl(c.lucroLiq)}</td><td className={'n '+margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</td></>}
+        <td>{v.condPgto}</td>
         <td style={{whiteSpace:'nowrap'}}>
-          <button className="ib" title="Documentos deste modelo" onClick={()=>onDocs(v.modelo)}>📎</button>
+          <Clip v={v}/>
           {podeEditar(v)&&<button className="ib" title="Editar" onClick={()=>setEdit(v)}>✏️</button>}
           <button className="ib" title="Duplicar" onClick={()=>duplicar(v)}>⧉</button>
           {podeEditar(v)&&<button className="ib" title="Excluir" onClick={()=>excluir(v)}>🗑️</button>}
         </td></tr>)}</tbody>
-      <tfoot><tr style={{fontWeight:700}}><td/><td colSpan="3">Total</td><td className="n">{tot.q}</td>{isAdmin&&<><td/><td/><td/><td className="n">{brl(tot.custo)}</td></>}<td className="n">{brl(tot.venda)}</td>{isAdmin&&<><td className="n">{brl(tot.lb)}</td><td className="n">{brl(tot.ll)}</td><td className="n">{pct(tot.venda?tot.ll/tot.venda:NaN)}</td></>}<td colSpan="2"/></tr></tfoot>
-    </table>{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div></div>
+      <tfoot><tr style={{fontWeight:700}}><td/><td colSpan="4">Total</td><td className="n">{tot.q}</td>{isAdmin&&<td className="n">{brl(tot.custo)}</td>}<td className="n">{brl(tot.venda)}</td>{isAdmin&&<><td className="n">{brl(tot.ll)}</td><td className="n">{pct(tot.venda?tot.ll/tot.venda:NaN)}</td></>}<td colSpan="2"/></tr></tfoot>
+    </table>{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div>
     <div className="mcards">{lista.map(({v,c})=><div className="mc" key={v.id} onClick={()=>podeEditar(v)&&setEdit(v)}>
       <div className="r1"><span>{v.cliente}</span><span>{brl(c.venda)}</span></div>
-      <div className="r2"><span>{dataBR(v.data)} · {v.modelo}{c.q>1?` ×${c.q}`:''}</span>{isAdmin&&<span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span>}</div>
-      <div className="r2"><span>{v.condPgto}</span><span><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0}} onClick={e=>{e.stopPropagation();toggle(v);}}>{v.status==='ok'?'✅ Recebido':'⏳ A receber'}</button> <button className="ib" onClick={e=>{e.stopPropagation();onDocs(v.modelo);}}>📎</button></span></div>
+      <div className="r2"><span>{dataBR(v.data)} · {v.modelo}{c.q>1?` ×${c.q}`:''}{v.nf?` · NF ${v.nf}`:''}</span>{isAdmin&&<span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span>}</div>
+      <div className="r2"><span>{v.condPgto}</span><span><Pill v={v}/> <Clip v={v}/></span></div>
     </div>)}{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div>
     {edit && <Modal title="Editar venda" onClose={()=>setEdit(null)} wide>
-      <VendaForm inicial={edit} precos={precos} vendas={vendas} cfg={cfg} isAdmin={isAdmin} onCancel={()=>setEdit(null)}
-        onSalvar={async n=>{ await store.put('vendas',n); setEdit(null); toast('Venda atualizada'); }}/>
+      <VendaForm inicial={edit} precos={precos} vendas={vendas} clientes={clientes} cfg={cfg} isAdmin={isAdmin} onCancel={()=>setEdit(null)}
+        onSalvar={async (n,_c,files)=>{ await store.put('vendas',n); if(files?.length) await anexarArquivos(files,{tipo:'Nota fiscal',vendaId:n.id,modelos:[n.modelo],nf:n.nf||'',cliente:n.cliente}); setEdit(null); toast('Venda atualizada'); }}/>
+    </Modal>}
+    {nfDe && <NFModal venda={nfDe} docs={docs} isAdmin={isAdmin} onClose={()=>setNfDe(null)} onDocsModelo={m=>{setNfDe(null);onDocs(m);}}/>}
+  </>;
+}
+
+/* ================= CLIENTES ================= */
+const CAMPOS_CLI = [['nome','Nome / apelido'],['razao','Razão social'],['doc','CNPJ / CPF'],['ie','Inscrição estadual'],['contato','Contato'],['telefone','Telefone'],['email','E-mail'],['endereco','Endereço'],['bairro','Bairro'],['cidade','Cidade'],['uf','UF'],['cep','CEP'],['obs','Observações']];
+function mapearColuna(h){
+  const k = normaliza(h);
+  if (/fantasia|apelido/.test(k)) return 'nome';
+  if (/razao/.test(k)) return 'razao';
+  if (/cnpj|cpf|documento/.test(k)) return 'doc';
+  if (/^ie$|inscri/.test(k)) return 'ie';
+  if (/contato|responsavel|comprador/.test(k)) return 'contato';
+  if (/e-?mail/.test(k)) return 'email';
+  if (/fone|celular|whats/.test(k)) return 'telefone';
+  if (/^numero$|^n[oº°]$|^num$/.test(k)) return 'numero';
+  if (/complemento/.test(k)) return 'complemento';
+  if (/endere|logradouro|^rua/.test(k)) return 'endereco';
+  if (/bairro/.test(k)) return 'bairro';
+  if (/cidade|municipio/.test(k)) return 'cidade';
+  if (/^uf$|estado/.test(k)) return 'uf';
+  if (/cep/.test(k)) return 'cep';
+  if (/obs/.test(k)) return 'obs';
+  if (/nome|cliente/.test(k)) return 'nome';
+  return null;
+}
+function lerClientesPlanilha(rows){
+  return rows.map(r=>{ const c={}; Object.entries(r).forEach(([h,val])=>{ const k=mapearColuna(h); const s=String(val??'').trim(); if(k&&s&&!c[k]) c[k]=s; });
+    if (c.numero) c.endereco = [c.endereco, c.numero].filter(Boolean).join(', '); if (c.complemento) c.endereco = [c.endereco, c.complemento].filter(Boolean).join(' – ');
+    delete c.numero; delete c.complemento; if(!c.nome && c.razao) c.nome=c.razao; return c; }).filter(c=>c.nome);
+}
+function ClienteForm({c, onSalvar, onExcluir}){
+  const [v,setV]=useState(c);
+  return <form onSubmit={e=>{e.preventDefault(); if(!String(v.nome||'').trim()) return toast('Informe o nome'); onSalvar({...v,nome:v.nome.trim()});}}>
+    <div className="fg">{CAMPOS_CLI.map(([k,l])=><div key={k} className={['nome','razao','endereco','email','obs'].includes(k)?'c2':''}><label className="lb">{l}</label>
+      {k==='obs'?<textarea className="f" rows="2" value={v[k]||''} onChange={e=>setV({...v,[k]:e.target.value})}/>:<input className="f" value={v[k]||''} onChange={e=>setV({...v,[k]:e.target.value})} autoFocus={k==='nome'}/>}</div>)}</div>
+    <div className="row" style={{marginTop:16}}>{onExcluir&&<button type="button" className="btn danger" onClick={onExcluir}>Excluir cliente</button>}<div className="sp"/><button className="btn pri">Salvar</button></div>
+  </form>;
+}
+function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
+  const [q,setQ]=useState(''); const [edit,setEdit]=useState(null); const [imp,setImp]=useState(null); const ref=useRef();
+  const resumo = useMemo(()=>{ const m={}; vendas.forEach(v=>{ const key = v.clienteId || ('n:'+normaliza(v.cliente)); const c=calc(v,cfg.imposto); m[key]=m[key]||{q:0,venda:0,ult:''}; m[key].q+=c.q; m[key].venda+=c.venda; if((v.data||'')>m[key].ult) m[key].ult=v.data; }); return m; },[vendas,cfg]);
+  const resDe = c => { const a=resumo[c.id], b=resumo['n:'+normaliza(c.nome)]; if(!a&&!b) return null; return {q:(a?.q||0)+(b?.q||0), venda:(a?.venda||0)+(b?.venda||0), ult:[a?.ult||'',b?.ult||''].sort().pop()}; };
+  const qn=normaliza(q);
+  const lista = clientes.filter(c=>!qn||normaliza([c.nome,c.razao,c.doc,c.cidade,c.contato,c.telefone].join(' ')).includes(qn)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  async function salvar(c){ await store.put('clientes',{...c,id:c.id||uid(),atualizadoEm:Date.now()}); setEdit(null); toast('Cliente salvo'); }
+  async function excluir(c){ if(confirm(`Excluir o cliente ${c.nome}? As vendas dele não são apagadas.`)){ await store.del('clientes',c.id); setEdit(null); } }
+  async function lerArquivo(f){
+    try{ const wb = XLSX.read(await f.arrayBuffer(), {type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]];
+      let rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      // se o cabeçalho não está na 1ª linha, procura a linha com "nome"/"razão"/"cnpj"
+      if (!rows.length || Object.keys(rows[0]).filter(mapearColuna).length<2) { const aoa = XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); const hi = aoa.findIndex(r=>r.filter(c=>mapearColuna(String(c))).length>=2); if(hi>=0){ const hd=aoa[hi].map(String); rows = aoa.slice(hi+1).map(r=>Object.fromEntries(hd.map((h,i)=>[h,r[i]]))); } }
+      const lidos = lerClientesPlanilha(rows);
+      const chave = c => c.doc ? 'd:'+String(c.doc).replace(/\D/g,'') : 'n:'+normaliza(c.nome);
+      const exist = new Map(clientes.map(c=>[chave(c),c]));
+      const novos=[], atualiza=[];
+      lidos.forEach(c=>{ const e=exist.get(chave(c)); if(e) atualiza.push({...e,...c}); else { novos.push({...c,id:uid()}); exist.set(chave(c),c); } });
+      setImp({arquivo:f.name, novos, atualiza});
+    }catch(e){ toast('Não consegui ler o arquivo: '+e.message); }
+  }
+  async function confirmarImport(){ await store.putMany('clientes',[...imp.novos,...imp.atualiza].map(c=>({...c,atualizadoEm:Date.now()}))); toast(`${imp.novos.length} cliente(s) novo(s), ${imp.atualiza.length} atualizado(s)`); setImp(null); }
+  return <>
+    <div className="row" style={{marginBottom:14}}><div><h1>Clientes</h1><div className="sub" style={{margin:0}}>{clientes.length} cadastrado(s) — aparecem para seleção ao lançar uma venda</div></div><div className="sp"/>
+      <input className="f" style={{maxWidth:240}} placeholder="🔍 Nome, CNPJ, cidade…" value={q} onChange={e=>setQ(e.target.value)}/>
+      <button className="btn" onClick={()=>ref.current.click()}>⬆ Importar planilha</button><input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e=>{e.target.files[0]&&lerArquivo(e.target.files[0]); e.target.value='';}}/>
+      <button className="btn pri" onClick={()=>setEdit({nome:''})}>+ Novo cliente</button></div>
+    {lista.length ? <div className="card desk" style={{padding:6}}><table className="tv"><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Cidade</th><th>Contato</th><th>Telefone</th><th className="n">Baterias</th><th className="n">Total comprado</th><th>Última compra</th><th/></tr></thead>
+      <tbody>{lista.map(c=>{ const r=resDe(c); return <tr key={c.id}>
+        <td><b>{c.nome}</b>{c.razao&&c.razao!==c.nome&&<div className="small muted">{c.razao}</div>}</td><td>{c.doc||'—'}</td><td>{[c.cidade,c.uf].filter(Boolean).join('/')||'—'}</td><td>{c.contato||'—'}</td><td>{c.telefone||'—'}</td>
+        <td className="n">{r?.q||0}</td><td className="n">{r?brl(r.venda):'—'}</td><td>{r?.ult?dataBR(r.ult):'—'}</td>
+        <td style={{whiteSpace:'nowrap'}}><button className="ib" title="Nova venda para este cliente" onClick={()=>onNovaVenda(c)}>➕</button><button className="ib" title="Editar" onClick={()=>setEdit(c)}>✏️</button></td></tr>; })}</tbody></table></div>
+    : <div className="card empty">{clientes.length?'Nenhum cliente encontrado.':'Nenhum cliente cadastrado. Use “Importar planilha” para trazer sua lista de clientes ou “+ Novo cliente”.'}</div>}
+    <div className="mcards">{lista.map(c=>{ const r=resDe(c); return <div className="mc" key={c.id} onClick={()=>setEdit(c)}>
+      <div className="r1"><span>{c.nome}</span><span>{r?brl(r.venda):''}</span></div>
+      <div className="r2"><span>{c.doc||''} {[c.cidade,c.uf].filter(Boolean).join('/')}</span><span>{c.telefone||''}</span></div></div>; })}</div>
+    {edit && <Modal title={edit.id?'Editar cliente':'Novo cliente'} onClose={()=>setEdit(null)} wide><ClienteForm c={edit} onSalvar={salvar} onExcluir={edit.id?()=>excluir(edit):null}/></Modal>}
+    {imp && <Modal title={`Importar clientes — ${imp.arquivo}`} onClose={()=>setImp(null)} wide>
+      <p><b>{imp.novos.length}</b> cliente(s) novo(s) · <b>{imp.atualiza.length}</b> já cadastrado(s) serão atualizados.</p>
+      <div style={{maxHeight:'50vh',overflow:'auto'}}><table><thead><tr><th>Nome</th><th>CNPJ/CPF</th><th>Cidade</th><th>Telefone</th><th></th></tr></thead>
+        <tbody>{[...imp.novos.map(c=>[c,'novo']),...imp.atualiza.map(c=>[c,'atualiza'])].slice(0,500).map(([c,t],i)=><tr key={i}><td>{c.nome}</td><td>{c.doc||''}</td><td>{[c.cidade,c.uf].filter(Boolean).join('/')}</td><td>{c.telefone||''}</td><td><span className={'pill '+(t==='novo'?'p-ok':'p-gray')}>{t}</span></td></tr>)}</tbody></table></div>
+      <div className="row" style={{marginTop:14,justifyContent:'flex-end'}}><button className="btn" onClick={()=>setImp(null)}>Cancelar</button><button className="btn pri" disabled={!imp.novos.length&&!imp.atualiza.length} onClick={confirmarImport}>Importar</button></div>
     </Modal>}
   </>;
 }
@@ -626,7 +788,8 @@ function PrecoForm({p,onSalvar,onExcluir}){
 /* ================= DOCUMENTOS ================= */
 const corTipo = (mime,nome) => { const e=(nome.split('.').pop()||'').toLowerCase(); if(e==='pdf') return ['PDF','#d64545']; if(/png|jpe?g|webp|gif|heic/.test(e)) return ['IMG','#2f6fb3']; if(/xlsx?|csv/.test(e)) return ['XLS','#1f8a4c']; if(/docx?/.test(e)) return ['DOC','#2463eb']; return [e.slice(0,4).toUpperCase()||'ARQ','#6b7280']; };
 
-function Documentos({docs, precos, isAdmin, modeloInicial}){
+function Documentos({docs:todosDocs, precos, isAdmin, modeloInicial}){
+  const docs = useMemo(()=>todosDocs.filter(d=>!d.vendaId),[todosDocs]);
   const modelos = useMemo(()=>[...new Set([...precos.filter(p=>p.categoria==='Bateria').map(p=>p.modelo), ...precos.filter(p=>p.categoria!=='Bateria').map(p=>p.modelo), ...docs.flatMap(d=>d.modelos||[])])],[precos,docs]);
   const [filtro,setFiltro]=useState(modeloInicial||'todos'); const [tipo,setTipo]=useState('todos'); const [q,setQ]=useState('');
   const [sel,setSel]=useState([]); const [up,setUp]=useState(null); const [busy,setBusy]=useState(null); const [drag,setDrag]=useState(false);
@@ -780,13 +943,13 @@ function Usuarios({me}){
 }
 
 /* ================= CONFIGURAÇÕES ================= */
-function Config({cfg, vendas, precos, docs, isAdmin, onSeed}){
+function Config({cfg, vendas, precos, clientes, docs, isAdmin, onSeed, irPara}){
   const [c,setC]=useState({imp:(cfg.imposto*100).toString().replace('.',','), meta:(cfg.metaMargem*100).toString().replace('.',',')});
   const impRef=useRef();
   async function salvar(){ await store.put('config',{...cfg, imposto:num(c.imp)/100, metaMargem:num(c.meta)/100}); toast('Configurações salvas'); }
-  function backup(){ const data={versao:1, geradoEm:new Date().toISOString(), vendas, precos, config:[cfg]}; const b=new Blob([JSON.stringify(data,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`backup-baterias-${hoje()}.json`; a.click(); }
+  function backup(){ const data={versao:2, geradoEm:new Date().toISOString(), vendas, precos, clientes, config:[cfg]}; const b=new Blob([JSON.stringify(data,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`backup-baterias-${hoje()}.json`; a.click(); }
   async function restaurar(f){ try{ const d=JSON.parse(await f.text()); if(!Array.isArray(d.vendas)) throw new Error('arquivo inválido'); if(!confirm(`Importar ${d.vendas.length} vendas e ${(d.precos||[]).length} preços? Registros com o mesmo ID serão substituídos.`)) return;
-    await store.putMany('vendas', d.vendas); if(d.precos) await store.putMany('precos', d.precos); if(d.config?.[0]) await store.put('config', {...d.config[0], id:'geral'}); toast('Backup importado'); }catch(e){ toast('Erro: '+e.message); } }
+    await store.putMany('vendas', d.vendas); if(d.precos) await store.putMany('precos', d.precos); if(d.clientes) await store.putMany('clientes', d.clientes); if(d.config?.[0]) await store.put('config', {...d.config[0], id:'geral'}); toast('Backup importado'); }catch(e){ toast('Erro: '+e.message); } }
   return <>
     <h1>Configurações</h1><div className="sub">Parâmetros de cálculo, backup e modo de armazenamento</div>
     {isAdmin && <div className="card"><h2>Cálculo</h2><div className="fg">
@@ -797,13 +960,13 @@ function Config({cfg, vendas, precos, docs, isAdmin, onSeed}){
     <div className="card"><h2>Armazenamento</h2>
       {CLOUD ? <p>☁️ <b>Modo nuvem (Firebase)</b> — {LOGIN?'dados compartilhados em tempo real entre todos os usuários.':'uso pessoal protegido por código de acesso; os dados aparecem em qualquer aparelho em que você digitar o código.'} Projeto: <code>{CFG.projectId}</code></p>
       : <><p>💾 <b>Modo local</b> — os dados ficam salvos somente neste navegador/aparelho.</p><p className="small muted">Para dar acesso a outros usuários, configure o Firebase no arquivo <code>firebase-config.js</code> (passo a passo no README do repositório). Antes de trocar, faça um backup aqui e importe-o depois no modo nuvem.</p></>}
-      <div className="small muted">{vendas.length} vendas · {precos.length} itens de preço · {docs.length} documentos</div>
+      <div className="small muted">{vendas.length} vendas · {clientes.length} clientes · {precos.length} itens de preço · {docs.length} documentos</div>
     </div>
     {isAdmin && <div className="card"><h2>Backup</h2><div className="row">
       <button className="btn" onClick={backup}>⬇ Exportar backup (JSON)</button>
       <button className="btn" onClick={()=>impRef.current.click()}>⬆ Importar backup</button><input ref={impRef} type="file" accept=".json" hidden onChange={e=>{e.target.files[0]&&restaurar(e.target.files[0]); e.target.value='';}}/>
       <button className="btn" onClick={onSeed}>Reimportar dados da planilha (aba Jun.)</button>
-    </div><p className="small muted">O backup inclui vendas, preços e configurações. Os documentos anexados não entram no backup (ficam no armazenamento do sistema).</p></div>}
+    </div><p className="small muted">O backup inclui vendas, clientes, preços e configurações. Os documentos anexados não entram no backup (ficam no armazenamento do sistema).</p></div>}
   </>;
 }
 
@@ -842,9 +1005,9 @@ function App(){
   const [perfil,setPerfil]=useState(LOGIN?undefined:{papel:'admin',nome:CLOUD?'Uso pessoal':'Usuário local',ativo:true});
   useEffect(()=>{ if(!LOGIN) return; return firebase.auth().onAuthStateChanged(async u=>{ setAuthUser(u||null); if(u){ try{ const d=await CloudStore.fs.collection('usuarios').doc(u.uid).get(); setPerfil(d.exists?{...d.data(),uid:u.uid}:null); }catch(e){ setPerfil(null); } } else setPerfil(undefined); }); },[]);
   const liberado = !!(authUser && perfil && perfil.ativo && acessoOk);
-  const vendasR = useCol('vendas', liberado), precosR = useCol('precos', liberado), cfgR = useCol('config', liberado), docsR = useCol('documentos', liberado);
+  const clientesR = useCol('clientes', liberado), vendasR = useCol('vendas', liberado), precosR = useCol('precos', liberado), cfgR = useCol('config', liberado), docsR = useCol('documentos', liberado);
   const [tab,setTab]=useState(()=>location.hash.slice(1)||'painel'); const [filtroV,setFiltroV]=useState(null); const [docModelo,setDocModelo]=useState(null);
-  const [novaAberta,setNovaAberta]=useState(false);
+  const [novaAberta,setNovaAberta]=useState(false); // false | true | {cliente}
   const [bannerOk,setBannerOk]=useState(()=>!!localStorage.getItem('cb-banner-ok'));
   useEffect(()=>{ location.hash=tab; window.scrollTo(0,0); },[tab]);
   const isAdmin = perfil?.papel==='admin';
@@ -866,17 +1029,18 @@ function App(){
   if (CLOUD && !authUser) return <><Login/><Toaster/></>;
   if (CLOUD && perfil===undefined) return <div className="empty" style={{paddingTop:80}}>Carregando…</div>;
   if (CLOUD && (!perfil || !perfil.ativo)) return <div className="login"><div className="box"><h2>Acesso não liberado</h2><p>Sua conta ({authUser.email}) ainda não foi liberada ou está bloqueada. Peça ao administrador para cadastrá-lo.</p><button className="btn" onClick={()=>firebase.auth().signOut()}>Sair</button></div></div>;
-  if (!vendasR || !precosR || !cfgR || !docsR) return <div className="empty" style={{paddingTop:80}}>Carregando dados…</div>;
+  if (!vendasR || !precosR || !cfgR || !docsR || !clientesR) return <div className="empty" style={{paddingTop:80}}>Carregando dados…</div>;
 
   const user = {uid:authUser.uid};
-  async function salvarVenda(v, continuar){
+  async function salvarVenda(v, continuar, files){
     const n = {...v, id:v.id||uid(), criadoEm:v.criadoEm||Date.now(), criadoPor:v.criadoPor||authUser.uid||null};
     await store.put('vendas', n); toast('Venda salva ✔');
+    if (files?.length) { try { await anexarArquivos(files, {tipo:'Nota fiscal', vendaId:n.id, modelos:[n.modelo], nf:n.nf||'', cliente:n.cliente}); toast('Venda salva ✔ — NF anexada'); } catch(e){ toast('Venda salva, mas a NF não foi anexada: '+e.message); } }
     if(!continuar){ setNovaAberta(false); if(tab==='nova') setTab('vendas'); }
   }
   const tabs = [
-    ['painel','Painel','📊'], ['vendas','Vendas','🧾'], ['nova','Nova venda','➕'],
-    ...(isAdmin?[['precos','Preços','🏷️']]:[]), ['docs','Documentos','📎'],
+    ['painel','Painel','📊'], ['vendas','Vendas','🧾'], ['nova','Nova venda','➕'], ['clientes','Clientes','🏢'],
+    ...(isAdmin?[['precos','Preços','🏷️']]:[]), ['docs','Documentos','📄'],
     ...(LOGIN&&isAdmin?[['usuarios','Usuários','👥']]:[]), ['config','Config.','⚙️'],
   ];
   const irPara = (t,f) => { if(t==='vendas') setFiltroV(f||null); setTab(t); };
@@ -886,25 +1050,26 @@ function App(){
   return <>
     <header className="top"><div className="topin">
       <div className="logo"><div className="ic">⚡</div>Controle de Baterias</div>
-      <nav className="nav">{tabs.map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}>{l}</button>)}</nav>
-      <div className="sp"/>
+      <nav className="nav">{tabs.map(([k,l,i])=><button key={k} title={l} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}><span className="ni">{i}</span><span className="nl">{l}</span></button>)}</nav>
       <div className="who"><InstallBtn/><span className="nm">{perfil.nome}{isAdmin?' · admin':''}</span>{LOGIN&&<button onClick={()=>firebase.auth().signOut()}>Sair</button>}{CODIGO_MODE&&<button title="Remove o código deste aparelho" onClick={()=>{ if(confirm('Sair deste aparelho? Será preciso digitar o código de acesso novamente.')){ localStorage.removeItem('cb-acesso'); location.reload(); } }}>Sair</button>}</div>
     </div></header>
     <main>
       {semCloudBanner && <div className="banner">💾 Modo local: os dados estão salvos só neste aparelho. Para liberar outros usuários, configure o Firebase (veja o README).<div className="sp"/><button className="btn sm" onClick={()=>{localStorage.setItem('cb-banner-ok','1'); setBannerOk(true);}}>Entendi</button></div>}
       {tab==='painel' && <Painel vendas={vendasR} cfg={cfg} isAdmin={isAdmin} irPara={irPara}/>}
-      {tab==='vendas' && <Vendas vendas={vendasR} precos={precosR} cfg={cfg} isAdmin={isAdmin} user={user} filtroInicial={filtroV} onDocs={abrirDocs}/>}
-      {tab==='nova' && <><h1>Nova venda</h1><div className="sub">Entrada rápida — custos preenchidos pela tabela de preços</div><div className="card"><VendaForm precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda}/></div></>}
+      {tab==='vendas' && <Vendas vendas={vendasR} precos={precosR} clientes={clientesR} docs={docsR} cfg={cfg} isAdmin={isAdmin} user={user} filtroInicial={filtroV} onDocs={abrirDocs}/>}
+      {tab==='nova' && <><h1>Nova venda</h1><div className="sub">Entrada rápida — custos preenchidos pela tabela de preços</div><div className="card"><VendaForm precos={precosR} vendas={vendasR} clientes={clientesR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda}/></div></>}
+      {tab==='clientes' && <Clientes clientes={clientesR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onNovaVenda={c=>setNovaAberta({cliente:c})}/>}
       {tab==='precos' && isAdmin && <Precos precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin}/>}
       {tab==='docs' && <Documentos docs={docsR} precos={precosR} isAdmin={isAdmin} modeloInicial={docModelo}/>}
       {tab==='usuarios' && LOGIN && isAdmin && <Usuarios me={user}/>}
       {tab==='config' && LOGIN && isAdmin && <div className="mobonly" style={{marginBottom:12}}><button className="btn" onClick={()=>setTab('usuarios')}>👥 Gerenciar usuários</button></div>}
-      {tab==='config' && <Config cfg={cfg} vendas={vendasR} precos={precosR} docs={docsR} isAdmin={isAdmin} onSeed={()=>seed(true)}/>}
+      {tab==='config' && isAdmin && <div className="mobonly" style={{marginBottom:12}}><button className="btn" onClick={()=>setTab('precos')}>🏷️ Tabela de preços</button></div>}
+      {tab==='config' && <Config cfg={cfg} vendas={vendasR} precos={precosR} clientes={clientesR} docs={docsR} isAdmin={isAdmin} onSeed={()=>seed(true)}/>}
       {CLOUD && isAdmin && !vendasR.length && !precosR.length && tab!=='config' && <div className="card row"><span>O banco está vazio.</span><div className="sp"/><button className="btn pri" onClick={()=>seed(false)}>Importar dados da planilha (aba Jun.)</button></div>}
     </main>
     {tab!=='nova' && <button className="fab" onClick={()=>setNovaAberta(true)} aria-label="Nova venda">+</button>}
-    <nav className="bnav">{tabs.filter(([k])=>['painel','vendas','nova','precos','docs','config'].includes(k)).map(([k,l,i])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}><span>{i}</span>{l}</button>)}</nav>
-    {novaAberta && <Modal title="Nova venda" wide onClose={()=>setNovaAberta(false)}><VendaForm precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda} onCancel={()=>setNovaAberta(false)}/></Modal>}
+    <nav className="bnav">{tabs.filter(([k])=>['painel','vendas','nova','clientes','docs','config'].includes(k)).map(([k,l,i])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}><span>{i}</span>{l}</button>)}</nav>
+    {novaAberta && <Modal title="Nova venda" wide onClose={()=>setNovaAberta(false)}><VendaForm clienteInicial={novaAberta.cliente} clientes={clientesR} precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda} onCancel={()=>setNovaAberta(false)}/></Modal>}
     <Toaster/>
   </>;
 }
