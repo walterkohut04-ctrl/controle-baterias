@@ -1,0 +1,15 @@
+{
+  "name": "Controle de Baterias",
+  "short_name": "Baterias",
+  "description": "Controle de venda de baterias com cálculo de margem, tabela de preços e documentos",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
+  "lang": "pt-BR",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

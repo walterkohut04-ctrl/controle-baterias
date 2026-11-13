@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Controle de Baterias</title>
+<meta name="theme-color" content="#14213d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Baterias">
+<style>
+:root{
+  --bg:#f3f5f9; --card:#fff; --ink:#18202f; --ink2:#4a5468; --muted:#8a93a6; --line:#e2e6ee;
+  --brand:#14213d; --accent:#f08a24; --accent2:#fff3e6; --ok:#1f8a4c; --okbg:#e6f5ec;
+  --warn:#b26a00; --warnbg:#fff4dc; --bad:#c0392b; --badbg:#fdecea; --blue:#2463eb; --bar:#2f6fb3;
+  --r:12px; --sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.top{background:var(--brand);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topin{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:10px 16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;white-space:nowrap}
+.logo .ic{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:16px}
+.nav{display:flex;gap:4px;flex:1;overflow-x:auto}
+.nav button{background:none;border:0;color:#c9d3e8;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.nav button.on{background:rgba(255,255,255,.14);color:#fff}
+.nav button:hover{color:#fff}
+.who{font-size:12px;color:#c9d3e8;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.who button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:6px;padding:5px 9px;cursor:pointer}
+main{max-width:1240px;margin:0 auto;padding:18px 16px 96px}
+h1{font-size:20px;margin:0 0 4px} h2{font-size:16px;margin:0 0 10px} h3{font-size:14px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:16px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(5,1fr)}
+.kpi{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px}
+.kpi .l{color:var(--ink2);font-size:12px} .kpi .v{font-size:21px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi.hl{background:var(--brand);color:#fff} .kpi.hl .l{color:#c9d3e8}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:#c6ccd8}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.dark{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.ib{background:none;border:0;cursor:pointer;padding:4px 6px;border-radius:6px;font-size:15px}
+.ib:hover{background:#eef1f6}
+input.f,select.f,textarea.f{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;outline:none}
+input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+label.lb{display:block;font-size:12px;color:var(--ink2);margin-bottom:4px;font-weight:600}
+.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.fg .c2{grid-column:span 2} .fg .c4{grid-column:1/-1}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:600}
+td{padding:9px 8px;border-bottom:1px solid #f0f2f6;vertical-align:middle;font-variant-numeric:tabular-nums}
+tr:hover td{background:#fafbfd}
+td.n,th.n{text-align:right;white-space:nowrap}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--okbg);color:var(--ok)} .p-warn{background:var(--warnbg);color:var(--warn)} .p-bad{background:var(--badbg);color:var(--bad)} .p-gray{background:#eef1f6;color:var(--ink2)}
+.m-ok{color:var(--ok);font-weight:600} .m-warn{color:var(--warn);font-weight:600} .m-bad{color:var(--bad);font-weight:600}
+.calc{background:var(--brand);color:#fff;border-radius:var(--r);padding:16px}
+.calc .ln{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.1);font-variant-numeric:tabular-nums}
+.calc .ln:last-child{border:0}
+.calc .big{font-size:26px;font-weight:700}
+.bars{display:flex;align-items:flex-end;gap:10px;height:190px;padding:8px 4px 0;border-bottom:1px solid var(--line)}
+.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;min-width:34px}
+.bars .b .bv{font-size:11px;color:var(--ink2);margin-bottom:4px;white-space:nowrap}
+.bars .b .bf{width:min(46px,80%);background:var(--bar);border-radius:4px 4px 0 0;transition:opacity .15s}
+.bars .b:hover .bf{opacity:.8}
+.bars-x{display:flex;gap:10px;padding:6px 4px 0}
+.bars-x div{flex:1;text-align:center;font-size:11px;color:var(--muted);min-width:34px}
+.hbar{height:8px;background:#eef1f6;border-radius:4px;overflow:hidden;min-width:60px}
+.hbar i{display:block;height:100%;background:var(--bar);border-radius:4px}
+.empty{text-align:center;color:var(--muted);padding:30px}
+.drop{border:2px dashed #c6ccd8;border-radius:var(--r);padding:26px;text-align:center;color:var(--ink2);background:#fafbfd;cursor:pointer}
+.drop.on{border-color:var(--accent);background:var(--accent2)}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.doc{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px}
+.doc.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+.doc .hd{display:flex;gap:10px;align-items:flex-start}
+.doc .fi{width:40px;height:46px;border-radius:6px;display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;flex:none}
+.doc .nm{font-weight:600;word-break:break-word}
+.doc .mt{font-size:12px;color:var(--muted)}
+.tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:11px;background:#eef1f6;color:var(--ink2);border-radius:5px;padding:1px 6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:14px;max-width:760px;width:100%;max-height:92vh;overflow:auto;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#18202f;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw}
+.bnav{display:none}
+.fab{display:none}
+.banner{background:var(--warnbg);color:#6b4300;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.login{min-height:100vh;display:grid;place-items:center;padding:16px;background:linear-gradient(160deg,#14213d,#26375e)}
+.login .box{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.mcards{display:none} .mobonly{display:none}
+.prog{height:6px;background:#eef1f6;border-radius:3px;overflow:hidden}.prog i{display:block;height:100%;background:var(--accent)}
+.muted{color:var(--muted)} .small{font-size:12px}
+.two{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr)} .kpis .kpi:last-child{grid-column:1/-1}
+  .two{grid-template-columns:1fr}
+  .fg{grid-template-columns:1fr 1fr} .fg .c2{grid-column:1/-1}
+  .nav,.who .nm{display:none}
+  .bnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);z-index:30;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .bnav button{flex:1;background:none;border:0;padding:6px 2px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+  .bnav button span{font-size:19px}
+  .bnav button.on{color:var(--brand);font-weight:700}
+  .fab{display:grid;position:fixed;right:18px;bottom:78px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;border:0;place-items:center;box-shadow:0 6px 18px rgba(240,138,36,.5);z-index:31;cursor:pointer}
+  .desk{display:none}
+  .mcards{display:block} .mobonly{display:block}
+  main{padding:14px 12px 110px}
+}
+.mc{border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:8px;background:#fff}
+.mc .r1{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.mc .r2{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink2);margin-top:4px}
+</style>
+<script src="firebase-config.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+  if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
+    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>');
+    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>');
+    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>');
+  }
+</script>
+</head>
+<body>
+<div id="root"><div style="padding:40px;text-align:center;color:#8a93a6">Carregando…</div></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* ================= DADOS INICIAIS (planilha Baterias_Full.xlsx – aba Jun.) ================= */
+const SEED_PRECOS = [
+  { id:'ind-digital-can', categoria:'Indicador', modelo:'Digital CAN', valorAntigo:674, valor:680 },
+  { id:'car-48v30a', categoria:'Carregador', modelo:'48V30A', valorAntigo:2530, valor:2900 },
+  { id:'car-24v30a', categoria:'Carregador', modelo:'24V30A', valorAntigo:1488, valor:1600 },
+  { id:'bat-24v105ah', categoria:'Bateria', modelo:'24V105AH', valorAntigo:7118, valor:6900 },
+  { id:'bat-24v163ah', categoria:'Bateria', modelo:'24V163AH', valorAntigo:10600, valor:10600 },
+  { id:'bat-24v230ah', categoria:'Bateria', modelo:'24V230AH', valorAntigo:10398, valor:11600 },
+  { id:'bat-48v230ah', categoria:'Bateria', modelo:'48V230AH', valorAntigo:21402, valor:20800 },
+];
+// [data, cliente, modelo, indicador, carregador, bateria, venda, condPgto, status]
+const SEED_VENDAS_RAW = [
+  ['2026-06-11','PTA','24V230AH Star',623.53,1600,11600,17000,'30/60/90','ok'],
+  ['2026-06-11','PTA','24V230AH Star',623.53,1600,11600,17000,'30/60/90','ok'],
+  ['2026-06-11','PTA','24V230AH Star',623.53,1600,11600,17000,'30/60/90','ok'],
+  ['2026-06-16','Lass','24V230AH TE',680,1600,11600,18000,'30/60','ok'],
+  ['2026-06-29','Lass','24V230AH TE',680,1600,11600,18000,'30/60','ok'],
+  ['2026-07-30','VR','24V230AH Star',680,0,11600,18000,'30/60/90','aberto'],
+  ['2026-07-30','VR','24V230AH Star',680,0,11600,18000,'30/60/90','aberto'],
+  ['2026-07-30','VR','48V230AH',680,0,20800,32000,'30/60/90','aberto'],
+  ['2026-07-30','Tecnopemt','24V163AH',680,0,10070,10750,'30/60/90','aberto'],
+  ['2026-08-12','Pacatuba','24V230AH',680,0,11600,18000,'30/60','aberto'],
+  ['2026-09-20','Bermac','48V230AH',680,0,20800,30000,'30/60/90','aberto'],
+  ['2026-09-28','Lass','24V105AH',680,1600,6900,13000,'30/60/90','aberto'],
+  ['2026-09-28','Lass','24V230AH',680,1600,11600,18000,'30/60/90','aberto'],
+  ['2026-11-09','J2D','24V230AH',680,0,10050,16000,'A definir','aberto'],
+  ['2026-11-09','Lass','24V105AH',680,1600,6400,12000,'30/60/90/120','aberto'],
+  ['2026-11-09','Lass','24V105AH',680,1600,6400,12000,'30/60/90/120','aberto'],
+  ['2026-11-09','Lass','24V105AH',680,1600,6400,12000,'30/60/90/120','aberto'],
+];
+const SEED_VENDAS = SEED_VENDAS_RAW.map((r,i)=>({
+  id:'v'+String(i+1).padStart(3,'0'), data:r[0], cliente:r[1], modelo:r[2], qtd:1,
+  indicador:r[3], indicadorNome:'Digital CAN', carregador:r[4], carregadorNome: r[4]? (r[2].startsWith('48')?'48V30A':'24V30A') : '', bateria:r[5], venda:r[6], condPgto:r[7], status:r[8],
+  obs:'Importado da planilha (aba Jun.)', criadoEm:Date.now()+i
+}));
+const CONFIG_PADRAO = { id:'geral', imposto:0.24, metaMargem:0.20 };
+const COND_PGTO = ['À vista','30','30/60','30/60/90','30/60/90/120','A definir'];
+const TIPOS_DOC = ['Ficha técnica','Certificado / Laudo','Manual','Garantia','Nota fiscal','Foto','Proposta','Outro'];
+
+/* ================= UTILITÁRIOS ================= */
+const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const brl0 = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const pct = v => isFinite(v) ? (v*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%' : '—';
+const num = v => { if (typeof v==='number') return v; if(!v) return 0; const s=String(v).trim(); const n = s.includes(',') ? Number(s.replace(/\./g,'').replace(',','.')) : Number(s); return isFinite(n)?n:0; };
+const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const dataBR = s => s ? s.split('-').reverse().join('/') : '';
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const fmtSize = b => b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB';
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+// chave do modelo: "24V230AH Star" -> "24V230"
+const chaveModelo = s => { const m=String(s||'').toUpperCase().replace(/\s/g,'').match(/(\d+)V(\d+)/); return m? m[1]+'V'+m[2] : String(s||'').toUpperCase().trim(); };
+
+function calc(v, imposto){
+  const q = Math.max(1, num(v.qtd)||1);
+  const custoUn = num(v.indicador)+num(v.carregador)+num(v.bateria);
+  const custo = custoUn*q, venda = num(v.venda)*q;
+  const lucroBruto = venda-custo;
+  const lucroLiq = lucroBruto*(1-imposto);
+  const margem = venda ? lucroLiq/venda : NaN;
+  return { q, custoUn, custo, venda, lucroBruto, imposto: lucroBruto*imposto, lucroLiq, margem };
+}
+function margemClasse(m, meta){ if(!isFinite(m)) return ''; if(m<=0) return 'm-bad'; if(m<meta*0.75) return 'm-warn'; return 'm-ok'; }
+// preço para atingir margem líquida m: V = C / (1 - m/(1-t))
+function precoSugerido(custoUn, meta, imposto){ const d = 1 - meta/(1-imposto); return d>0 ? custoUn/d : NaN; }
+
+/* ================= CAMADA DE DADOS ================= */
+const CFG = window.FIREBASE_CONFIG;
+const CLOUD = !!(CFG && CFG.apiKey && window.firebase);
+const CHUNK = 700000; // bytes por parte (Firestore aceita até ~1MB por documento)
+const MAX_FILE = 20*1024*1024;
+
+const LocalStore = (() => {
+  const STORES = ['vendas','precos','config','documentos','arquivos'];
+  let dbp; const subs = {};
+  const open = () => dbp || (dbp = new Promise((res,rej)=>{
+    const r = indexedDB.open('controle-baterias',1);
+    r.onupgradeneeded = () => { const d=r.result; STORES.forEach(s=>{ if(!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); }); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const run = async (store, mode, fn) => { const d = await open(); return new Promise((res,rej)=>{ const t=d.transaction(store,mode); const req=fn(t.objectStore(store)); t.oncomplete=()=>res(req&&req.result); t.onerror=()=>rej(t.error); }); };
+  const all = c => run(c,'readonly',s=>s.getAll());
+  const emit = async c => { const list = await all(c); (subs[c]||[]).forEach(cb=>cb(list)); };
+  return {
+    mode:'local',
+    subscribe(c, cb){ (subs[c]=subs[c]||[]).push(cb); all(c).then(cb); return ()=>{ subs[c]=subs[c].filter(x=>x!==cb); }; },
+    async put(c, obj){ await run(c,'readwrite',s=>s.put(obj)); emit(c); },
+    async putMany(c, list){ await run(c,'readwrite',s=>{ list.forEach(o=>s.put(o)); }); emit(c); },
+    async del(c, id){ await run(c,'readwrite',s=>s.delete(id)); emit(c); },
+    async saveFile(meta, file, onProg){ await run('arquivos','readwrite',s=>s.put({id:meta.id, blob:file})); onProg&&onProg(1); await this.put('documentos', meta); },
+    async getFile(meta){ const r = await run('arquivos','readonly',s=>s.get(meta.id)); return r && r.blob; },
+    async delFile(meta){ await run('arquivos','readwrite',s=>s.delete(meta.id)); await this.del('documentos', meta.id); },
+  };
+})();
+
+const CloudStore = (() => {
+  if (!CLOUD) return null;
+  firebase.initializeApp(CFG);
+  const fs = firebase.firestore();
+  try { fs.enablePersistence({synchronizeTabs:true}).catch(()=>{}); } catch(e){}
+  const strip = o => { const {id, ...rest} = o; return JSON.parse(JSON.stringify(rest)); };
+  const blobToB64 = blob => new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]||''); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
+  const b64ToBytes = b64 => { const bin=atob(b64); const a=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i); return a; };
+  return {
+    mode:'cloud', fs,
+    subscribe(c, cb){ return fs.collection(c).onSnapshot(s=>cb(s.docs.map(d=>({id:d.id, ...d.data()}))), e=>{ console.error(c,e); cb([]); }); },
+    put(c, obj){ return fs.collection(c).doc(obj.id).set(strip(obj)); },
+    async putMany(c, list){ for (let i=0;i<list.length;i+=400){ const b=fs.batch(); list.slice(i,i+400).forEach(o=>b.set(fs.collection(c).doc(o.id), strip(o))); await b.commit(); } },
+    del(c, id){ return fs.collection(c).doc(id).delete(); },
+    async saveFile(meta, file, onProg){
+      const n = Math.max(1, Math.ceil(file.size/CHUNK));
+      for (let i=0;i<n;i++){
+        const data = await blobToB64(file.slice(i*CHUNK,(i+1)*CHUNK));
+        await fs.collection('arquivos').doc(meta.id+'_'+i).set({doc:meta.id, i, data});
+        onProg && onProg((i+1)/n);
+      }
+      await this.put('documentos', {...meta, partes:n});
+    },
+    async getFile(meta){
+      const parts = [];
+      for (let i=0;i<(meta.partes||1);i++){ const d = await fs.collection('arquivos').doc(meta.id+'_'+i).get(); if(!d.exists) throw new Error('Parte do arquivo não encontrada'); parts.push(b64ToBytes(d.data().data)); }
+      return new Blob(parts, {type: meta.mime||'application/octet-stream'});
+    },
+    async delFile(meta){ await this.del('documentos', meta.id); for (let i=0;i<(meta.partes||1);i++) await fs.collection('arquivos').doc(meta.id+'_'+i).delete(); },
+  };
+})();
+
+const store = CloudStore || LocalStore;
+
+function useCol(name, enabled=true){
+  const [data,setData] = useState(null);
+  useEffect(()=>{ if(!enabled) return; return store.subscribe(name, setData); },[name,enabled]);
+  return data;
+}
+
+/* ================= COMPONENTES BÁSICOS ================= */
+function Modal({title, onClose, children, wide}){
+  useEffect(()=>{ const k=e=>e.key==='Escape'&&onClose(); window.addEventListener('keydown',k); return ()=>window.removeEventListener('keydown',k); },[]);
+  return <div className="modal-bg" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal" style={wide?{maxWidth:980}:null}>
+      <div className="row" style={{marginBottom:12}}><h2 style={{margin:0}}>{title}</h2><div className="sp"/><button className="ib" onClick={onClose}>✕</button></div>
+      {children}
+    </div>
+  </div>;
+}
+let toastFn = ()=>{};
+const toast = msg => toastFn(msg);
+function Toaster(){
+  const [m,setM] = useState(null); const t = useRef();
+  toastFn = msg => { setM(msg); clearTimeout(t.current); t.current=setTimeout(()=>setM(null),3200); };
+  return m ? <div className="toast">{m}</div> : null;
+}
+function Money({value, onChange, ...p}){
+  const [txt,setTxt] = useState(value===''||value==null?'':String(value).replace('.',','));
+  useEffect(()=>{ const cur = num(txt); if (cur !== num(value)) setTxt(value===''||value==null?'':String(value).replace('.',',')); },[value]);
+  return <input className="f" inputMode="decimal" value={txt} onChange={e=>{ setTxt(e.target.value); onChange(num(e.target.value)); }} {...p}/>;
+}
+
+/* ================= LOGIN (modo nuvem) ================= */
+function Login(){
+  const [email,setEmail]=useState(''); const [senha,setSenha]=useState(''); const [nome,setNome]=useState('');
+  const [modo,setModo]=useState('entrar'); const [erro,setErro]=useState(''); const [busy,setBusy]=useState(false);
+  const traduz = e => ({'auth/invalid-credential':'E-mail ou senha incorretos.','auth/wrong-password':'Senha incorreta.','auth/user-not-found':'Usuário não encontrado.','auth/email-already-in-use':'E-mail já cadastrado.','auth/weak-password':'Senha muito fraca (mínimo 6 caracteres).','auth/invalid-email':'E-mail inválido.','permission-denied':'Já existe um administrador. Peça acesso a ele.'}[e.code] || e.message);
+  async function go(e){
+    e.preventDefault(); setErro(''); setBusy(true);
+    try{
+      if (modo==='entrar') await firebase.auth().signInWithEmailAndPassword(email.trim(), senha);
+      else if (modo==='reset'){ await firebase.auth().sendPasswordResetEmail(email.trim()); setErro('Enviamos um link de redefinição para o seu e-mail.'); }
+      else {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email.trim(), senha);
+        const fs = CloudStore.fs; const b = fs.batch();
+        b.set(fs.collection('config').doc('bootstrap'), {uid:cred.user.uid, em:Date.now()});
+        b.set(fs.collection('usuarios').doc(cred.user.uid), {nome:nome||email, email:email.trim(), papel:'admin', ativo:true, criadoEm:Date.now()});
+        try { await b.commit(); } catch(err){ await cred.user.delete().catch(()=>{}); throw err; }
+        location.reload();
+      }
+    }catch(err){ setErro(traduz(err)); }
+    setBusy(false);
+  }
+  return <div className="login"><form className="box" onSubmit={go}>
+    <div className="logo" style={{color:'var(--brand)',marginBottom:18}}><div className="ic">⚡</div>Controle de Baterias</div>
+    {modo==='primeiro' && <div style={{marginBottom:10}}><label className="lb">Seu nome</label><input className="f" value={nome} onChange={e=>setNome(e.target.value)}/></div>}
+    <div style={{marginBottom:10}}><label className="lb">E-mail</label><input className="f" type="email" required value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username"/></div>
+    {modo!=='reset' && <div style={{marginBottom:14}}><label className="lb">Senha</label><input className="f" type="password" required value={senha} onChange={e=>setSenha(e.target.value)} autoComplete={modo==='entrar'?'current-password':'new-password'}/></div>}
+    {erro && <div className="small" style={{color:erro.startsWith('Enviamos')?'var(--ok)':'var(--bad)',marginBottom:10}}>{erro}</div>}
+    <button className="btn pri" style={{width:'100%',justifyContent:'center'}} disabled={busy}>{busy?'Aguarde…':modo==='entrar'?'Entrar':modo==='reset'?'Enviar link':'Criar administrador'}</button>
+    <div className="row small" style={{marginTop:14,justifyContent:'space-between'}}>
+      {modo==='entrar' ? <>
+        <a href="#" onClick={e=>{e.preventDefault();setModo('reset');setErro('');}}>Esqueci a senha</a>
+        <a href="#" onClick={e=>{e.preventDefault();setModo('primeiro');setErro('');}}>Primeiro acesso (admin)</a>
+      </> : <a href="#" onClick={e=>{e.preventDefault();setModo('entrar');setErro('');}}>← Voltar ao login</a>}
+    </div>
+    {modo==='primeiro' && <p className="small muted" style={{marginTop:12}}>Só funciona uma vez: cria o administrador do sistema. Os demais usuários são cadastrados por ele na aba Usuários.</p>}
+  </form></div>;
+}
+
+/* ================= PAINEL ================= */
+function Painel({vendas, cfg, isAdmin, irPara}){
+  const anos = useMemo(()=>[...new Set(vendas.map(v=>(v.data||'').slice(0,4)).filter(Boolean))].sort().reverse(),[vendas]);
+  const [ano,setAno]=useState('todos'); const [mes,setMes]=useState('todos'); const [cli,setCli]=useState('todos');
+  const clientes = useMemo(()=>[...new Set(vendas.map(v=>v.cliente))].sort(),[vendas]);
+  const fil = vendas.filter(v=>(ano==='todos'||v.data?.startsWith(ano)) && (mes==='todos'||v.data?.slice(5,7)===mes) && (cli==='todos'||v.cliente===cli));
+  const t = fil.reduce((a,v)=>{ const c=calc(v,cfg.imposto); a.custo+=c.custo; a.venda+=c.venda; a.lb+=c.lucroBruto; a.ll+=c.lucroLiq; a.q+=c.q; return a; },{custo:0,venda:0,lb:0,ll:0,q:0});
+  const margem = t.venda? t.ll/t.venda : NaN;
+
+  const porMes = useMemo(()=>{ const m={}; fil.forEach(v=>{ const k=(v.data||'').slice(0,7); const c=calc(v,cfg.imposto); m[k]=m[k]||{k,venda:0,ll:0,q:0}; m[k].venda+=c.venda; m[k].ll+=c.lucroLiq; m[k].q+=c.q; }); return Object.values(m).sort((a,b)=>a.k.localeCompare(b.k)).slice(-12); },[fil,cfg]);
+  const maxMes = Math.max(1,...porMes.map(m=>m.venda));
+  const agrupa = key => { const m={}; fil.forEach(v=>{ const k= key==='modelo'? chaveModelo(v.modelo)+'AH' : v[key]; const c=calc(v,cfg.imposto); m[k]=m[k]||{k,q:0,venda:0,custo:0,ll:0}; m[k].q+=c.q; m[k].venda+=c.venda; m[k].custo+=c.custo; m[k].ll+=c.lucroLiq; }); return Object.values(m).sort((a,b)=>b.venda-a.venda); };
+  const porCli = agrupa('cliente'), porMod = agrupa('modelo');
+  const maxCli = Math.max(1,...porCli.map(x=>x.venda));
+  const abertos = fil.filter(v=>v.status!=='ok');
+  const aDefinir = fil.filter(v=>/definir/i.test(v.condPgto||''));
+  const baixas = fil.filter(v=>calc(v,cfg.imposto).margem < cfg.metaMargem*0.75);
+
+  return <>
+    <div className="row" style={{marginBottom:14}}>
+      <div><h1>Painel</h1><div className="sub" style={{margin:0}}>Custos, vendas e margem de lucro — imposto sobre lucro de {pct(cfg.imposto)}</div></div>
+      <div className="sp"/>
+      <select className="f" style={{width:'auto'}} value={ano} onChange={e=>setAno(e.target.value)}><option value="todos">Todos os anos</option>{anos.map(a=><option key={a}>{a}</option>)}</select>
+      <select className="f" style={{width:'auto'}} value={mes} onChange={e=>setMes(e.target.value)}><option value="todos">Todos os meses</option>{MESES.map((m,i)=><option key={m} value={String(i+1).padStart(2,'0')}>{m}</option>)}</select>
+      <select className="f" style={{width:'auto'}} value={cli} onChange={e=>setCli(e.target.value)}><option value="todos">Todos os clientes</option>{clientes.map(c=><option key={c}>{c}</option>)}</select>
+    </div>
+    {isAdmin ? <div className="grid kpis" style={{marginBottom:16}}>
+      <div className="kpi"><div className="l">Total custo</div><div className="v">{brl(t.custo)}</div></div>
+      <div className="kpi"><div className="l">Total venda</div><div className="v">{brl(t.venda)}</div></div>
+      <div className="kpi"><div className="l">Lucro bruto</div><div className="v">{brl(t.lb)}</div></div>
+      <div className="kpi"><div className="l">Lucro líquido</div><div className="v">{brl(t.ll)}</div></div>
+      <div className="kpi hl"><div className="l">Margem de lucro</div><div className="v">{pct(margem)}</div></div>
+    </div> : <div className="grid kpis" style={{marginBottom:16,gridTemplateColumns:'repeat(2,1fr)'}}>
+      <div className="kpi"><div className="l">Baterias vendidas</div><div className="v">{t.q}</div></div>
+      <div className="kpi hl"><div className="l">Total vendido</div><div className="v">{brl(t.venda)}</div></div>
+    </div>}
+
+    <div className="two">
+      <div className="card">
+        <div className="row"><h2 style={{margin:0}}>Vendas por mês</h2><div className="sp"/><span className="small muted">{t.q} bateria(s) no filtro</span></div>
+        {porMes.length ? <>
+          <div className="bars">{porMes.map(m=>
+            <div className="b" key={m.k} title={`${MESES[+m.k.slice(5,7)-1]}/${m.k.slice(0,4)}\nVenda: ${brl(m.venda)}\nQtd: ${m.q}${isAdmin?`\nLucro líquido: ${brl(m.ll)}`:''}`}>
+              <div className="bv">{brl0(m.venda/1000).replace(/\s?R\$\s?/,'R$ ')}k</div>
+              <div className="bf" style={{height:Math.max(2,(m.venda/maxMes)*150)+'px'}}/>
+            </div>)}</div>
+          <div className="bars-x">{porMes.map(m=><div key={m.k}>{MESES[+m.k.slice(5,7)-1]}/{m.k.slice(2,4)}</div>)}</div>
+        </> : <div className="empty">Sem vendas no período.</div>}
+      </div>
+      <div className="card">
+        <h2>Atenção</h2>
+        <div style={{display:'grid',gap:8}}>
+          <a href="#" onClick={e=>{e.preventDefault();irPara('vendas','aberto');}} className="row" style={{textDecoration:'none',color:'inherit'}}><span className="pill p-warn">{abertos.length}</span> vendas em aberto</a>
+          <div className="row"><span className="pill p-gray">{aDefinir.length}</span> com condição de pagamento “A definir”</div>
+          {isAdmin && <div className="row"><span className={'pill '+(baixas.length?'p-bad':'p-ok')}>{baixas.length}</span> abaixo de {pct(cfg.metaMargem*0.75)} de margem</div>}
+          {isAdmin && baixas.slice(0,5).map(v=>{ const c=calc(v,cfg.imposto); return <div key={v.id} className="small muted">• {dataBR(v.data)} · {v.cliente} · {v.modelo} — <span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span></div>; })}
+        </div>
+      </div>
+    </div>
+
+    <div className="two">
+      <div className="card">
+        <h2>Por cliente</h2>
+        <div className="scroll"><table><thead><tr><th>Cliente</th><th className="n">Qtd</th><th>Venda</th><th className="n">Valor</th>{isAdmin&&<th className="n">Lucro líq.</th>}{isAdmin&&<th className="n">Margem</th>}</tr></thead>
+        <tbody>{porCli.map(x=><tr key={x.k}><td><b>{x.k}</b></td><td className="n">{x.q}</td><td style={{width:'30%'}}><div className="hbar"><i style={{width:(x.venda/maxCli*100)+'%'}}/></div></td><td className="n">{brl(x.venda)}</td>{isAdmin&&<td className="n">{brl(x.ll)}</td>}{isAdmin&&<td className={'n '+margemClasse(x.ll/x.venda,cfg.metaMargem)}>{pct(x.ll/x.venda)}</td>}</tr>)}</tbody></table></div>
+      </div>
+      <div className="card">
+        <h2>Por modelo</h2>
+        <table><thead><tr><th>Modelo</th><th className="n">Qtd</th><th className="n">Valor</th>{isAdmin&&<th className="n">Margem</th>}</tr></thead>
+        <tbody>{porMod.map(x=><tr key={x.k}><td><b>{x.k}</b></td><td className="n">{x.q}</td><td className="n">{brl(x.venda)}</td>{isAdmin&&<td className={'n '+margemClasse(x.ll/x.venda,cfg.metaMargem)}>{pct(x.ll/x.venda)}</td>}</tr>)}</tbody></table>
+      </div>
+    </div>
+  </>;
+}
+
+/* ================= FORMULÁRIO DE VENDA (entrada rápida) ================= */
+function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
+  const bats = precos.filter(p=>p.categoria==='Bateria').sort((a,b)=>a.modelo.localeCompare(b.modelo));
+  const cars = precos.filter(p=>p.categoria==='Carregador');
+  const inds = precos.filter(p=>p.categoria==='Indicador');
+  const precoDe = (lista, nome) => { const k=chaveModelo(nome); const p = lista.find(x=>x.modelo===nome) || lista.find(x=>chaveModelo(x.modelo)===k); return p? p.valor : 0; };
+  const novo = () => ({ data:hoje(), cliente:'', modelo:bats[0]?.modelo||'', qtd:1,
+    indicadorNome: inds[0]?.modelo||'', indicador: inds[0]?.valor||0,
+    carregadorNome:'', carregador:0, bateria: bats[0]?.valor||0, venda:'', condPgto:'30/60/90', status:'aberto', obs:'' });
+  const [v,setV] = useState(()=> inicial ? {...inicial} : novo());
+  const set = (k,val) => setV(o=>({...o,[k]:val}));
+  const clientes = useMemo(()=>[...new Set(vendas.map(x=>x.cliente).filter(Boolean))].sort(),[vendas]);
+  const c = calc(v, cfg.imposto);
+  const sug = precoSugerido(c.custoUn, cfg.metaMargem, cfg.imposto);
+  const ultima = useMemo(()=>{ const k=chaveModelo(v.modelo); return vendas.filter(x=>chaveModelo(x.modelo)===k && x.id!==v.id).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; },[v.modelo,vendas]);
+
+  function escolheModelo(m){ setV(o=>({...o, modelo:m, bateria: precoDe(bats,m) || o.bateria })); }
+  function escolheCar(m){ setV(o=>({...o, carregadorNome:m, carregador: m? precoDe(cars,m) : 0 })); }
+  function escolheInd(m){ setV(o=>({...o, indicadorNome:m, indicador: m? precoDe(inds,m) : 0 })); }
+  function salvar(e, continuar){
+    e && e.preventDefault();
+    if(!v.cliente.trim()) return toast('Informe o cliente');
+    if(!v.modelo.trim()) return toast('Informe o modelo da bateria');
+    if(!num(v.venda)) return toast('Informe o valor de venda');
+    onSalvar({...v, cliente:v.cliente.trim(), qtd:Math.max(1,num(v.qtd)||1), indicador:num(v.indicador), carregador:num(v.carregador), bateria:num(v.bateria), venda:num(v.venda)}, continuar);
+    if (continuar) setV(o=>({...novo(), data:o.data, cliente:o.cliente, condPgto:o.condPgto}));
+  }
+  const modelosLista = [...new Set([...bats.map(b=>b.modelo), ...(v.modelo&&!bats.some(b=>b.modelo===v.modelo)?[v.modelo]:[])])];
+
+  return <form onSubmit={salvar}>
+    <div className={isAdmin?'two':''}>
+      <div>
+        <div className="fg">
+          <div><label className="lb">Data do pedido</label><input className="f" type="date" value={v.data} onChange={e=>set('data',e.target.value)}/></div>
+          <div className="c2"><label className="lb">Cliente</label><input className="f" list="dl-cli" value={v.cliente} onChange={e=>set('cliente',e.target.value)} placeholder="Nome do cliente" autoFocus={!inicial}/><datalist id="dl-cli">{clientes.map(x=><option key={x} value={x}/>)}</datalist></div>
+          <div><label className="lb">Quantidade</label><input className="f" type="number" min="1" value={v.qtd} onChange={e=>set('qtd',e.target.value)}/></div>
+          <div className="c2"><label className="lb">Modelo da bateria</label>
+            <input className="f" list="dl-mod" value={v.modelo} onChange={e=>escolheModelo(e.target.value)} placeholder="Ex.: 24V230AH"/>
+            <datalist id="dl-mod">{modelosLista.map(m=><option key={m} value={m}/>)}</datalist>
+            <div className="chips" style={{marginTop:6}}>{bats.map(b=><button type="button" key={b.id} className={'chip'+(chaveModelo(v.modelo)===chaveModelo(b.modelo)?' on':'')} onClick={()=>escolheModelo(b.modelo)}>{b.modelo}</button>)}</div>
+          </div>
+          <div className="c2"><label className="lb">Valor de venda (unitário)</label><Money value={v.venda} onChange={x=>set('venda',x)} placeholder="0,00" style={{fontSize:18,fontWeight:700}}/>
+            {isAdmin && isFinite(sug) && <div className="small" style={{marginTop:5}}>Sugerido p/ margem {pct(cfg.metaMargem)}: <a href="#" onClick={e=>{e.preventDefault();set('venda',Math.ceil(sug/50)*50);}}><b>{brl(Math.ceil(sug/50)*50)}</b></a></div>}
+            {isAdmin && num(v.venda)>0 && <div className="mobonly small" style={{marginTop:4}}>Lucro líq. <b>{brl(c.lucroLiq)}</b> · Margem <b className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</b></div>}
+            {ultima && <div className="small muted">Última venda deste modelo: {brl(ultima.venda)} ({ultima.cliente}, {dataBR(ultima.data)})</div>}
+          </div>
+          <div className="c2"><label className="lb">Carregador</label>
+            <select className="f" value={v.carregadorNome||''} onChange={e=>escolheCar(e.target.value)}><option value="">Sem carregador</option>{cars.map(x=><option key={x.id} value={x.modelo}>{x.modelo}{isAdmin?` — ${brl(x.valor)}`:''}</option>)}</select></div>
+          <div className="c2"><label className="lb">Indicador</label>
+            <select className="f" value={v.indicadorNome==null?(inds[0]?.modelo||''):v.indicadorNome} onChange={e=>escolheInd(e.target.value)}><option value="">Sem indicador</option>{inds.map(x=><option key={x.id} value={x.modelo}>{x.modelo}{isAdmin?` — ${brl(x.valor)}`:''}</option>)}</select></div>
+          {isAdmin && <>
+            <div><label className="lb">Custo bateria</label><Money value={v.bateria} onChange={x=>set('bateria',x)}/></div>
+            <div><label className="lb">Custo carregador</label><Money value={v.carregador} onChange={x=>set('carregador',x)}/></div>
+            <div><label className="lb">Custo indicador</label><Money value={v.indicador} onChange={x=>set('indicador',x)}/></div>
+            <div/>
+          </>}
+          <div className="c2"><label className="lb">Condição de pagamento</label>
+            <input className="f" list="dl-pg" value={v.condPgto} onChange={e=>set('condPgto',e.target.value)}/><datalist id="dl-pg">{COND_PGTO.map(x=><option key={x} value={x}/>)}</datalist>
+            <div className="chips" style={{marginTop:6}}>{COND_PGTO.map(x=><button type="button" key={x} className={'chip'+(v.condPgto===x?' on':'')} onClick={()=>set('condPgto',x)}>{x}</button>)}</div></div>
+          <div className="c2"><label className="lb">Situação</label>
+            <div className="chips"><button type="button" className={'chip'+(v.status!=='ok'?' on':'')} onClick={()=>set('status','aberto')}>Em aberto</button><button type="button" className={'chip'+(v.status==='ok'?' on':'')} onClick={()=>set('status','ok')}>OK (concluída)</button></div></div>
+          <div className="c4"><label className="lb">Observações</label><textarea className="f" rows="2" value={v.obs||''} onChange={e=>set('obs',e.target.value)}/></div>
+        </div>
+      </div>
+      {isAdmin && <div className="calc">
+        <div className="small" style={{opacity:.7,marginBottom:6}}>CÁLCULO {c.q>1?`(× ${c.q} unidades)`:''}</div>
+        <div className="ln"><span>Custo Tecnopemt</span><b>{brl(c.custo)}</b></div>
+        <div className="ln"><span>Valor da venda</span><b>{brl(c.venda)}</b></div>
+        <div className="ln"><span>Lucro s/ imposto</span><b>{brl(c.lucroBruto)}</b></div>
+        <div className="ln"><span>Imposto ({pct(cfg.imposto)})</span><b>{brl(-c.imposto)}</b></div>
+        <div className="ln"><span>Lucro c/ imposto</span><b>{brl(c.lucroLiq)}</b></div>
+        <div style={{marginTop:12}}><div className="small" style={{opacity:.7}}>Margem de lucro</div>
+          <div className="big" style={{color: !isFinite(c.margem)?'#fff': c.margem<=0?'#ff8a80': c.margem<cfg.metaMargem*0.75?'#ffd180':'#9be7b4'}}>{pct(c.margem)}</div>
+          <div className="small" style={{opacity:.7}}>meta {pct(cfg.metaMargem)}</div></div>
+      </div>}
+    </div>
+    <div className="row" style={{marginTop:16,justifyContent:'flex-end'}}>
+      {onCancel && <button type="button" className="btn" onClick={onCancel}>Cancelar</button>}
+      {!inicial && <button type="button" className="btn" onClick={e=>salvar(e,true)}>Salvar e lançar outra</button>}
+      <button className="btn pri">{inicial?'Salvar alterações':'Salvar venda'}</button>
+    </div>
+  </form>;
+}
+
+/* ================= LISTA DE VENDAS ================= */
+function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
+  const [q,setQ]=useState(''); const [st,setSt]=useState(filtroInicial||'todos'); const [edit,setEdit]=useState(null);
+  const [ord,setOrd]=useState({k:'data',d:-1});
+  useEffect(()=>{ if(filtroInicial) setSt(filtroInicial); },[filtroInicial]);
+  const lista = vendas.filter(v=>(st==='todos'||(st==='ok'?v.status==='ok':v.status!=='ok')) &&
+    (!q || [v.cliente,v.modelo,v.condPgto,v.obs,dataBR(v.data)].join(' ').toLowerCase().includes(q.toLowerCase())))
+    .map(v=>({v,c:calc(v,cfg.imposto)}))
+    .sort((a,b)=>{ const g=x=>({data:x.v.data||'',cliente:x.v.cliente||'',modelo:x.v.modelo||'',venda:x.c.venda,custo:x.c.custo,ll:x.c.lucroLiq,margem:x.c.margem}[ord.k]); const A=g(a),B=g(b); return (A>B?1:A<B?-1:(a.v.criadoEm||0)-(b.v.criadoEm||0))*ord.d; });
+  const tot = lista.reduce((a,{c})=>({custo:a.custo+c.custo,venda:a.venda+c.venda,lb:a.lb+c.lucroBruto,ll:a.ll+c.lucroLiq,q:a.q+c.q}),{custo:0,venda:0,lb:0,ll:0,q:0});
+  const podeEditar = v => isAdmin || v.criadoPor===user?.uid;
+  const Th = ({k,children,n}) => <th className={n?'n':''} style={{cursor:'pointer'}} onClick={()=>setOrd(o=>({k,d:o.k===k?-o.d:-1}))}>{children}{ord.k===k?(ord.d>0?' ▲':' ▼'):''}</th>;
+  async function toggle(v){ if(!podeEditar(v)) return; await store.put('vendas',{...v,status:v.status==='ok'?'aberto':'ok'}); }
+  async function excluir(v){ if(confirm(`Excluir a venda de ${v.cliente} (${v.modelo}, ${dataBR(v.data)})?`)){ await store.del('vendas',v.id); toast('Venda excluída'); } }
+  async function duplicar(v){ const n={...v,id:uid(),data:hoje(),status:'aberto',criadoEm:Date.now(),criadoPor:user?.uid||null,obs:''}; await store.put('vendas',n); toast('Venda duplicada com a data de hoje'); }
+  function exportar(){
+    const rows = lista.map(({v,c})=>({ 'Data Pedido':dataBR(v.data), 'Cliente':v.cliente, 'Modelo bateria':v.modelo, 'Qtd':c.q,
+      ...(isAdmin?{'Indicador':num(v.indicador),'Carregador':num(v.carregador),'Bateria':num(v.bateria),'Custo Tecnopemt':c.custo}:{}),
+      'Valor da Venda':c.venda, ...(isAdmin?{'Lucro S/ imposto':c.lucroBruto,[`Lucro C/ Imposto de ${Math.round(cfg.imposto*100)}%`]:c.lucroLiq,'Margem de Lucro':isFinite(c.margem)?c.margem:''}:{}),
+      'Cond. Pgto':v.condPgto, 'Situação':v.status==='ok'?'OK':'Em aberto', 'Obs':v.obs||'' }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Vendas');
+    if (isAdmin) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(precos.map(p=>({Categoria:p.categoria,Modelo:p.modelo,'Valor Antigo':p.valorAntigo,'Valor Atual':p.valor}))), 'Preços');
+    XLSX.writeFile(wb, `vendas-baterias-${hoje()}.xlsx`);
+  }
+  return <>
+    <div className="row" style={{marginBottom:14}}>
+      <div><h1>Vendas</h1><div className="sub" style={{margin:0}}>{lista.length} lançamento(s) · {tot.q} bateria(s)</div></div><div className="sp"/>
+      <input className="f" style={{maxWidth:240}} placeholder="Buscar cliente, modelo…" value={q} onChange={e=>setQ(e.target.value)}/>
+      <div className="chips">{[['todos','Todas'],['aberto','Em aberto'],['ok','OK']].map(([k,l])=><button key={k} className={'chip'+(st===k?' on':'')} onClick={()=>setSt(k)}>{l}</button>)}</div>
+      <button className="btn" onClick={exportar}>⬇ Excel</button>
+    </div>
+    <div className="card desk" style={{padding:6}}><div className="scroll"><table>
+      <thead><tr><th></th><Th k="data">Data</Th><Th k="cliente">Cliente</Th><Th k="modelo">Modelo</Th><th className="n">Qtd</th>
+        {isAdmin&&<><th className="n">Indicador</th><th className="n">Carregador</th><th className="n">Bateria</th><Th k="custo" n>Custo</Th></>}
+        <Th k="venda" n>Venda</Th>{isAdmin&&<><th className="n">Lucro s/ imp.</th><Th k="ll" n>Lucro c/ imp.</Th><Th k="margem" n>Margem</Th></>}<th>Pgto</th><th></th></tr></thead>
+      <tbody>{lista.map(({v,c})=><tr key={v.id}>
+        <td><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0,cursor:podeEditar(v)?'pointer':'default'}} onClick={()=>toggle(v)} title="Clique para alternar">{v.status==='ok'?'OK':'Aberto'}</button></td>
+        <td>{dataBR(v.data)}</td><td><b>{v.cliente}</b>{v.obs&&<div className="small muted" title={v.obs} style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.obs}</div>}</td><td>{v.modelo}</td><td className="n">{c.q}</td>
+        {isAdmin&&<><td className="n">{brl(v.indicador)}</td><td className="n">{brl(v.carregador)}</td><td className="n">{brl(v.bateria)}</td><td className="n">{brl(c.custo)}</td></>}
+        <td className="n"><b>{brl(c.venda)}</b></td>
+        {isAdmin&&<><td className="n">{brl(c.lucroBruto)}</td><td className="n">{brl(c.lucroLiq)}</td><td className={'n '+margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</td></>}
+        <td style={{whiteSpace:'nowrap'}}>{v.condPgto}</td>
+        <td style={{whiteSpace:'nowrap'}}>
+          <button className="ib" title="Documentos deste modelo" onClick={()=>onDocs(v.modelo)}>📎</button>
+          {podeEditar(v)&&<button className="ib" title="Editar" onClick={()=>setEdit(v)}>✏️</button>}
+          <button className="ib" title="Duplicar" onClick={()=>duplicar(v)}>⧉</button>
+          {podeEditar(v)&&<button className="ib" title="Excluir" onClick={()=>excluir(v)}>🗑️</button>}
+        </td></tr>)}</tbody>
+      <tfoot><tr style={{fontWeight:700}}><td/><td colSpan="3">Total</td><td className="n">{tot.q}</td>{isAdmin&&<><td/><td/><td/><td className="n">{brl(tot.custo)}</td></>}<td className="n">{brl(tot.venda)}</td>{isAdmin&&<><td className="n">{brl(tot.lb)}</td><td className="n">{brl(tot.ll)}</td><td className="n">{pct(tot.venda?tot.ll/tot.venda:NaN)}</td></>}<td colSpan="2"/></tr></tfoot>
+    </table>{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div></div>
+    <div className="mcards">{lista.map(({v,c})=><div className="mc" key={v.id} onClick={()=>podeEditar(v)&&setEdit(v)}>
+      <div className="r1"><span>{v.cliente}</span><span>{brl(c.venda)}</span></div>
+      <div className="r2"><span>{dataBR(v.data)} · {v.modelo}{c.q>1?` ×${c.q}`:''}</span>{isAdmin&&<span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span>}</div>
+      <div className="r2"><span>{v.condPgto}</span><span><span className={'pill '+(v.status==='ok'?'p-ok':'p-warn')}>{v.status==='ok'?'OK':'Aberto'}</span> <button className="ib" onClick={e=>{e.stopPropagation();onDocs(v.modelo);}}>📎</button></span></div>
+    </div>)}{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div>
+    {edit && <Modal title="Editar venda" onClose={()=>setEdit(null)} wide>
+      <VendaForm inicial={edit} precos={precos} vendas={vendas} cfg={cfg} isAdmin={isAdmin} onCancel={()=>setEdit(null)}
+        onSalvar={async n=>{ await store.put('vendas',n); setEdit(null); toast('Venda atualizada'); }}/>
+    </Modal>}
+  </>;
+}
+
+/* ================= TABELA DE PREÇOS ================= */
+function Precos({precos, vendas, cfg, isAdmin}){
+  const [edit,setEdit]=useState(null);
+  const cats = ['Bateria','Carregador','Indicador'];
+  const outras = [...new Set(precos.map(p=>p.categoria))].filter(c=>!cats.includes(c));
+  const ultimaVenda = m => { const k=chaveModelo(m); return vendas.filter(v=>chaveModelo(v.modelo)===k).sort((a,b)=>(b.data||'').localeCompare(a.data||''))[0]; };
+  async function salvar(p){
+    const ant = precos.find(x=>x.id===p.id);
+    let n = {...p, valor:num(p.valor)};
+    if (ant && num(ant.valor)!==n.valor){ n.valorAntigo = num(ant.valor); n.historico=[...(ant.historico||[]),{valor:num(ant.valor),ate:hoje()}].slice(-20); }
+    n.atualizadoEm = hoje();
+    await store.put('precos', n); setEdit(null); toast('Preço salvo');
+  }
+  async function excluir(p){ if(confirm(`Excluir ${p.categoria} ${p.modelo} da tabela?`)) { await store.del('precos',p.id); setEdit(null); } }
+  return <>
+    <div className="row" style={{marginBottom:14}}><div><h1>Tabela de preços</h1><div className="sub" style={{margin:0}}>Custo atual dos itens (Tecnopemt). Usado automaticamente ao lançar vendas.</div></div><div className="sp"/>
+      {isAdmin&&<button className="btn pri" onClick={()=>setEdit({id:'',categoria:'Bateria',modelo:'',valor:''})}>+ Novo item</button>}</div>
+    {[...cats,...outras].map(cat=>{ const itens = precos.filter(p=>p.categoria===cat).sort((a,b)=>a.modelo.localeCompare(b.modelo)); if(!itens.length) return null;
+      return <div className="card" key={cat} style={{padding:6}}>
+        <h2 style={{padding:'8px 8px 0'}}>{cat==='Bateria'?'🔋':cat==='Carregador'?'🔌':'📟'} {cat}</h2>
+        <div className="scroll"><table><thead><tr><th>Modelo</th><th className="n">Valor antigo</th><th className="n">Valor atual</th><th className="n">Variação</th>
+          {cat==='Bateria'&&<th className="n">Venda sugerida*</th>}{cat==='Bateria'&&<th>Última venda</th>}<th>Atualizado</th><th/></tr></thead>
+        <tbody>{itens.map(p=>{ const varr = p.valorAntigo? (p.valor-p.valorAntigo)/p.valorAntigo : 0; const uv = cat==='Bateria'&&ultimaVenda(p.modelo);
+          const ind = precos.find(x=>x.categoria==='Indicador'); const sug = precoSugerido(num(p.valor)+num(ind?.valor), cfg.metaMargem, cfg.imposto);
+          return <tr key={p.id}><td><b>{p.modelo}</b></td><td className="n muted">{p.valorAntigo!=null&&p.valorAntigo!==''?brl(p.valorAntigo):'—'}</td><td className="n"><b>{brl(p.valor)}</b></td>
+          <td className="n"><span className={'pill '+(varr>0?'p-bad':varr<0?'p-ok':'p-gray')}>{varr>0?'▲':varr<0?'▼':''} {pct(Math.abs(varr))}</span></td>
+          {cat==='Bateria'&&<td className="n">{brl(Math.ceil(sug/50)*50)}</td>}
+          {cat==='Bateria'&&<td className="small">{uv?<>{brl(uv.venda)} <span className="muted">· {uv.cliente} · {dataBR(uv.data)}</span></>:'—'}</td>}
+          <td className="small muted">{p.atualizadoEm?dataBR(p.atualizadoEm):'planilha'}</td>
+          <td>{isAdmin&&<button className="ib" onClick={()=>setEdit(p)}>✏️</button>}</td></tr>; })}</tbody></table></div>
+      </div>; })}
+    <p className="small muted">* Venda sugerida = (bateria + indicador) para atingir a meta de margem líquida de {pct(cfg.metaMargem)} com imposto de {pct(cfg.imposto)} sobre o lucro. Sem carregador.</p>
+    {edit && <Modal title={edit.id?'Atualizar preço':'Novo item'} onClose={()=>setEdit(null)}>
+      <PrecoForm p={edit} onSalvar={p=>salvar({...p,id:p.id||(p.categoria.slice(0,3).toLowerCase()+'-'+p.modelo.toLowerCase().replace(/[^a-z0-9]+/g,''))})} onExcluir={edit.id?()=>excluir(edit):null}/>
+    </Modal>}
+  </>;
+}
+function PrecoForm({p,onSalvar,onExcluir}){
+  const [v,setV]=useState(p);
+  return <form onSubmit={e=>{e.preventDefault(); if(!v.modelo.trim()||!num(v.valor)) return toast('Preencha modelo e valor'); onSalvar({...v,modelo:v.modelo.trim()});}}>
+    <div className="fg">
+      <div className="c2"><label className="lb">Categoria</label><input className="f" list="dl-cat" value={v.categoria} onChange={e=>setV({...v,categoria:e.target.value})} disabled={!!p.id}/><datalist id="dl-cat"><option value="Bateria"/><option value="Carregador"/><option value="Indicador"/></datalist></div>
+      <div className="c2"><label className="lb">Modelo</label><input className="f" value={v.modelo} onChange={e=>setV({...v,modelo:e.target.value})} disabled={!!p.id} placeholder="Ex.: 24V230AH"/></div>
+      <div className="c2"><label className="lb">Novo valor (custo)</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus/></div>
+      {p.id&&<div className="c2"><label className="lb">Valor atual</label><div style={{padding:'9px 0'}}>{brl(p.valor)} <span className="small muted">→ passa a ser o “valor antigo”</span></div></div>}
+    </div>
+    {p.historico?.length>0&&<div className="small muted" style={{marginTop:10}}>Histórico: {p.historico.slice().reverse().map(h=>`${brl(h.valor)} (até ${dataBR(h.ate)})`).join(' · ')}</div>}
+    <div className="row" style={{marginTop:16}}>{onExcluir&&<button type="button" className="btn danger" onClick={onExcluir}>Excluir item</button>}<div className="sp"/><button className="btn pri">Salvar</button></div>
+  </form>;
+}
+
+/* ================= DOCUMENTOS ================= */
+const corTipo = (mime,nome) => { const e=(nome.split('.').pop()||'').toLowerCase(); if(e==='pdf') return ['PDF','#d64545']; if(/png|jpe?g|webp|gif|heic/.test(e)) return ['IMG','#2f6fb3']; if(/xlsx?|csv/.test(e)) return ['XLS','#1f8a4c']; if(/docx?/.test(e)) return ['DOC','#2463eb']; return [e.slice(0,4).toUpperCase()||'ARQ','#6b7280']; };
+
+function Documentos({docs, precos, isAdmin, modeloInicial}){
+  const modelos = useMemo(()=>[...new Set([...precos.filter(p=>p.categoria==='Bateria').map(p=>p.modelo), ...precos.filter(p=>p.categoria!=='Bateria').map(p=>p.modelo), ...docs.flatMap(d=>d.modelos||[])])],[precos,docs]);
+  const [filtro,setFiltro]=useState(modeloInicial||'todos'); const [tipo,setTipo]=useState('todos'); const [q,setQ]=useState('');
+  const [sel,setSel]=useState([]); const [up,setUp]=useState(null); const [busy,setBusy]=useState(null); const [drag,setDrag]=useState(false);
+  const [preview,setPreview]=useState(null);
+  const fileRef = useRef();
+  useEffect(()=>{ if(modeloInicial){ setFiltro(modeloInicial); } },[modeloInicial]);
+  const fkey = filtro==='todos'?null:chaveModelo(filtro);
+  const lista = docs.filter(d=>(!fkey || d.geral || (d.modelos||[]).some(m=>chaveModelo(m)===fkey)) && (tipo==='todos'||d.tipo===tipo) && (!q||[d.nome,d.descricao,d.tipo,...(d.modelos||[])].join(' ').toLowerCase().includes(q.toLowerCase())))
+    .sort((a,b)=>(b.criadoEm||0)-(a.criadoEm||0));
+  const selDocs = docs.filter(d=>sel.includes(d.id));
+
+  function escolher(files){ files=[...files]; if(!files.length) return; const grandes=files.filter(f=>f.size>MAX_FILE); if(grandes.length) toast(`Arquivo acima de ${fmtSize(MAX_FILE)} ignorado: ${grandes.map(f=>f.name).join(', ')}`);
+    files=files.filter(f=>f.size<=MAX_FILE); if(files.length) setUp({files, tipo:'Ficha técnica', modelos: fkey? [filtro]:[], descricao:'', geral:false}); }
+  async function enviar(){
+    if(!up.modelos.length && !up.geral) return toast('Vincule a pelo menos um modelo (ou marque “documento geral”)');
+    for (let i=0;i<up.files.length;i++){ const f=up.files[i];
+      const meta = {id:uid(), nome:f.name, mime:f.type||'application/octet-stream', tamanho:f.size, tipo:up.tipo, modelos:up.modelos, geral:up.geral, descricao:up.descricao, criadoEm:Date.now()};
+      setBusy({nome:f.name, i:i+1, n:up.files.length, p:0});
+      try { await store.saveFile(meta, f, p=>setBusy(b=>({...b,p}))); } catch(e){ console.error(e); toast('Falha ao enviar '+f.name+': '+e.message); }
+    }
+    setBusy(null); setUp(null); toast('Documento(s) anexado(s)');
+  }
+  async function blobDe(d){ setBusy({nome:d.nome,i:1,n:1,p:.5}); try{ const b = await store.getFile(d); if(!b) throw new Error('Arquivo não encontrado'); return new File([b], d.nome, {type:d.mime}); } finally { setBusy(null); } }
+  async function baixar(list){ for (const d of list){ const f = await blobDe(d); const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=d.nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); } }
+  async function ver(d){ const f = await blobDe(d); setPreview({d, url:URL.createObjectURL(f)}); }
+  async function compartilhar(list){
+    if(!list.length) return;
+    try{
+      const files = []; for (const d of list) files.push(await blobDe(d));
+      const modelosTxt = [...new Set(list.flatMap(d=>d.modelos||[]))].join(', ');
+      const texto = `Segue documentação da(s) bateria(s) ${modelosTxt}:\n` + list.map(d=>`• ${d.tipo} – ${d.nome}`).join('\n');
+      if (navigator.canShare && navigator.canShare({files})) { await navigator.share({files, title:'Documentação de baterias', text:texto}); return; }
+      // Sem compartilhamento nativo (ex.: alguns PCs): baixa os arquivos e abre o e-mail com o texto pronto
+      for (const f of files){ const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); }
+      toast('Arquivos baixados — anexe-os no e-mail/WhatsApp que vai abrir');
+      setTimeout(()=>{ location.href = `mailto:?subject=${encodeURIComponent('Documentação de baterias '+modelosTxt)}&body=${encodeURIComponent(texto+'\n\n(arquivos em anexo)')}`; }, 800);
+    }catch(e){ if(e.name!=='AbortError') toast('Não foi possível compartilhar: '+e.message); }
+  }
+  async function excluir(d){ if(confirm(`Excluir o documento "${d.nome}"?`)){ await store.delFile(d); setSel(s=>s.filter(x=>x!==d.id)); toast('Documento excluído'); } }
+  async function editarMeta(d, patch){ await store.put('documentos', {...d, ...patch}); }
+  const kitModelo = () => { if(!fkey) return; setSel(lista.map(d=>d.id)); };
+
+  return <>
+    <div className="row" style={{marginBottom:14}}><div><h1>Documentos das baterias</h1><div className="sub" style={{margin:0}}>Fichas técnicas, certificados, manuais e garantias — prontos para enviar ao cliente.</div></div><div className="sp"/>
+      <button className="btn pri" onClick={()=>fileRef.current.click()}>+ Anexar documento</button>
+      <input ref={fileRef} type="file" multiple hidden onChange={e=>{escolher(e.target.files); e.target.value='';}}/>
+    </div>
+    <div className={'drop'+(drag?' on':'')} style={{marginBottom:14}} onClick={()=>fileRef.current.click()}
+      onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);escolher(e.dataTransfer.files);}}>
+      📎 Arraste arquivos aqui ou clique para anexar (PDF, fotos, Word, Excel — até {fmtSize(MAX_FILE)} cada)
+    </div>
+    <div className="card">
+      <div className="row" style={{marginBottom:10}}>
+        <b className="small">Modelo:</b>
+        <div className="chips">
+          <button className={'chip'+(filtro==='todos'?' on':'')} onClick={()=>{setFiltro('todos');setSel([]);}}>Todos</button>
+          {modelos.map(m=><button key={m} className={'chip'+(filtro===m?' on':'')} onClick={()=>{setFiltro(m);setSel([]);}}>{m} <span className="muted">({docs.filter(d=>(d.modelos||[]).some(x=>chaveModelo(x)===chaveModelo(m))).length})</span></button>)}
+          {filtro!=='todos' && !modelos.includes(filtro) && <button className="chip on">{filtro}</button>}
+        </div>
+      </div>
+      <div className="row">
+        <select className="f" style={{width:'auto'}} value={tipo} onChange={e=>setTipo(e.target.value)}><option value="todos">Todos os tipos</option>{TIPOS_DOC.map(t=><option key={t}>{t}</option>)}</select>
+        <input className="f" style={{maxWidth:240}} placeholder="Buscar…" value={q} onChange={e=>setQ(e.target.value)}/>
+        <div className="sp"/>
+        {fkey && lista.length>0 && <button className="btn dark" onClick={()=>compartilhar(lista)}>📤 Enviar kit {filtro} ({lista.length})</button>}
+      </div>
+    </div>
+    {sel.length>0 && <div className="banner" style={{background:'var(--brand)',color:'#fff',position:'sticky',top:64,zIndex:10}}>
+      <b>{sel.length} selecionado(s)</b> · {fmtSize(selDocs.reduce((a,d)=>a+(d.tamanho||0),0))}<div className="sp"/>
+      <button className="btn sm pri" onClick={()=>compartilhar(selDocs)}>📤 Enviar ao cliente</button>
+      <button className="btn sm" onClick={()=>baixar(selDocs)}>⬇ Baixar</button>
+      <button className="btn sm" onClick={()=>setSel([])}>Limpar</button>
+    </div>}
+    {lista.length ? <div className="docs">{lista.map(d=>{ const [lbl,cor]=corTipo(d.mime,d.nome); const on=sel.includes(d.id);
+      return <div className={'doc'+(on?' sel':'')} key={d.id}>
+        <div className="hd">
+          <input type="checkbox" checked={on} onChange={()=>setSel(s=>on?s.filter(x=>x!==d.id):[...s,d.id])} style={{marginTop:4}}/>
+          <div className="fi" style={{background:cor}}>{lbl}</div>
+          <div style={{minWidth:0}}><div className="nm">{d.nome}</div><div className="mt">{d.tipo} · {fmtSize(d.tamanho||0)} · {new Date(d.criadoEm).toLocaleDateString('pt-BR')}</div></div>
+        </div>
+        {d.descricao && <div className="small" style={{color:'var(--ink2)'}}>{d.descricao}</div>}
+        <div className="tags">{d.geral&&<span className="tag">Geral</span>}{(d.modelos||[]).map(m=><span className="tag" key={m}>{m}</span>)}</div>
+        <div className="row" style={{gap:4}}>
+          <button className="btn sm" onClick={()=>ver(d)}>👁 Ver</button>
+          <button className="btn sm" onClick={()=>baixar([d])}>⬇</button>
+          <button className="btn sm pri" onClick={()=>compartilhar([d])}>📤 Enviar</button>
+          <div className="sp"/>
+          {isAdmin && <button className="ib" title="Editar vínculos" onClick={()=>setUp({edit:d, tipo:d.tipo, modelos:d.modelos||[], descricao:d.descricao||'', geral:!!d.geral})}>✏️</button>}
+          {isAdmin && <button className="ib" title="Excluir" onClick={()=>excluir(d)}>🗑️</button>}
+        </div>
+      </div>; })}</div>
+    : <div className="card empty">{docs.length? 'Nenhum documento para este filtro.' : 'Nenhum documento anexado ainda. Comece pelas fichas técnicas de cada modelo de bateria.'}</div>}
+
+    {up && <Modal title={up.edit?'Editar documento':`Anexar ${up.files.length} arquivo(s)`} onClose={()=>!busy&&setUp(null)}>
+      {!up.edit && <div className="small muted" style={{marginBottom:10}}>{up.files.map(f=>`${f.name} (${fmtSize(f.size)})`).join(' · ')}</div>}
+      <label className="lb">Tipo de documento</label>
+      <div className="chips" style={{marginBottom:12}}>{TIPOS_DOC.map(t=><button type="button" key={t} className={'chip'+(up.tipo===t?' on':'')} onClick={()=>setUp({...up,tipo:t})}>{t}</button>)}</div>
+      <label className="lb">Vincular aos modelos</label>
+      <div className="chips" style={{marginBottom:6}}>{modelos.map(m=>{ const on=up.modelos.includes(m); return <button type="button" key={m} className={'chip'+(on?' on':'')} onClick={()=>setUp({...up,modelos:on?up.modelos.filter(x=>x!==m):[...up.modelos,m]})}>{on?'✓ ':''}{m}</button>; })}</div>
+      <label className="small" style={{display:'flex',gap:6,alignItems:'center',marginBottom:12}}><input type="checkbox" checked={up.geral} onChange={e=>setUp({...up,geral:e.target.checked})}/> Documento geral (aparece em todos os modelos — ex.: certificado da empresa)</label>
+      <label className="lb">Descrição (opcional)</label>
+      <input className="f" value={up.descricao} onChange={e=>setUp({...up,descricao:e.target.value})} placeholder="Ex.: Ficha técnica fabricante Star, rev. 2026"/>
+      {busy && <div style={{marginTop:14}}><div className="small">Enviando {busy.nome} ({busy.i}/{busy.n})…</div><div className="prog"><i style={{width:(busy.p*100)+'%'}}/></div></div>}
+      <div className="row" style={{marginTop:16,justifyContent:'flex-end'}}>
+        <button className="btn" disabled={!!busy} onClick={()=>setUp(null)}>Cancelar</button>
+        <button className="btn pri" disabled={!!busy} onClick={async()=>{ if(up.edit){ await editarMeta(up.edit,{tipo:up.tipo,modelos:up.modelos,descricao:up.descricao,geral:up.geral}); setUp(null); toast('Documento atualizado'); } else enviar(); }}>{up.edit?'Salvar':'Anexar'}</button>
+      </div>
+    </Modal>}
+    {busy && !up && <div className="toast">Abrindo {busy.nome}…</div>}
+    {preview && <Modal title={preview.d.nome} wide onClose={()=>{URL.revokeObjectURL(preview.url);setPreview(null);}}>
+      {/^image\//.test(preview.d.mime) ? <img src={preview.url} style={{maxWidth:'100%'}}/>
+       : preview.d.mime==='application/pdf' ? <iframe src={preview.url} style={{width:'100%',height:'70vh',border:0}}/>
+       : <div className="empty">Pré-visualização indisponível para este tipo. Use “Baixar”.</div>}
+      <div className="row" style={{marginTop:12,justifyContent:'flex-end'}}><button className="btn" onClick={()=>baixar([preview.d])}>⬇ Baixar</button><button className="btn pri" onClick={()=>compartilhar([preview.d])}>📤 Enviar ao cliente</button></div>
+    </Modal>}
+  </>;
+}
+
+/* ================= USUÁRIOS (modo nuvem) ================= */
+function Usuarios({me}){
+  const users = useCol('usuarios') || [];
+  const [novo,setNovo]=useState(null); const [busy,setBusy]=useState(false);
+  async function criar(e){
+    e.preventDefault(); setBusy(true);
+    try{
+      const sec = firebase.apps.find(a=>a.name==='sec') || firebase.initializeApp(CFG,'sec');
+      const cred = await sec.auth().createUserWithEmailAndPassword(novo.email.trim(), novo.senha);
+      await CloudStore.fs.collection('usuarios').doc(cred.user.uid).set({nome:novo.nome, email:novo.email.trim(), papel:novo.papel, ativo:true, criadoEm:Date.now()});
+      await sec.auth().signOut(); setNovo(null); toast('Usuário criado. Envie o e-mail e a senha para ele.');
+    }catch(err){ toast('Erro: '+(err.code==='auth/email-already-in-use'?'e-mail já cadastrado':err.message)); }
+    setBusy(false);
+  }
+  const upd = (u,patch) => CloudStore.fs.collection('usuarios').doc(u.id).update(patch);
+  return <>
+    <div className="row" style={{marginBottom:14}}><div><h1>Usuários</h1><div className="sub" style={{margin:0}}>Quem pode acessar o sistema</div></div><div className="sp"/><button className="btn pri" onClick={()=>setNovo({nome:'',email:'',senha:'',papel:'operador'})}>+ Novo usuário</button></div>
+    <div className="card" style={{padding:6}}><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th/></tr></thead>
+      <tbody>{users.sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(u=><tr key={u.id}>
+        <td><b>{u.nome}</b>{u.id===me.uid&&<span className="small muted"> (você)</span>}</td><td>{u.email}</td>
+        <td><select className="f" style={{width:'auto'}} value={u.papel} disabled={u.id===me.uid} onChange={e=>upd(u,{papel:e.target.value})}><option value="admin">Administrador</option><option value="operador">Operador</option></select></td>
+        <td><span className={'pill '+(u.ativo?'p-ok':'p-gray')}>{u.ativo?'Ativo':'Bloqueado'}</span></td>
+        <td style={{whiteSpace:'nowrap'}}>{u.id!==me.uid&&<button className="btn sm" onClick={()=>upd(u,{ativo:!u.ativo})}>{u.ativo?'Bloquear':'Reativar'}</button>} <button className="btn sm" onClick={()=>firebase.auth().sendPasswordResetEmail(u.email).then(()=>toast('Link de nova senha enviado para '+u.email))}>Redefinir senha</button></td>
+      </tr>)}</tbody></table></div>
+    <div className="card small"><b>Perfis:</b> <b>Administrador</b> vê custos, lucros e margens, altera preços e gerencia usuários. <b>Operador</b> lança vendas (custo preenchido automaticamente pela tabela), vê valores de venda e usa os documentos — sem ver custos/margens.</div>
+    {novo && <Modal title="Novo usuário" onClose={()=>setNovo(null)}><form onSubmit={criar}><div className="fg">
+      <div className="c2"><label className="lb">Nome</label><input className="f" required value={novo.nome} onChange={e=>setNovo({...novo,nome:e.target.value})}/></div>
+      <div className="c2"><label className="lb">E-mail</label><input className="f" type="email" required value={novo.email} onChange={e=>setNovo({...novo,email:e.target.value})}/></div>
+      <div className="c2"><label className="lb">Senha inicial</label><input className="f" required minLength="6" value={novo.senha} onChange={e=>setNovo({...novo,senha:e.target.value})}/></div>
+      <div className="c2"><label className="lb">Perfil</label><select className="f" value={novo.papel} onChange={e=>setNovo({...novo,papel:e.target.value})}><option value="operador">Operador</option><option value="admin">Administrador</option></select></div>
+    </div><div className="row" style={{marginTop:16,justifyContent:'flex-end'}}><button className="btn pri" disabled={busy}>{busy?'Criando…':'Criar usuário'}</button></div></form></Modal>}
+  </>;
+}
+
+/* ================= CONFIGURAÇÕES ================= */
+function Config({cfg, vendas, precos, docs, isAdmin, onSeed}){
+  const [c,setC]=useState({imp:(cfg.imposto*100).toString().replace('.',','), meta:(cfg.metaMargem*100).toString().replace('.',',')});
+  const impRef=useRef();
+  async function salvar(){ await store.put('config',{...cfg, imposto:num(c.imp)/100, metaMargem:num(c.meta)/100}); toast('Configurações salvas'); }
+  function backup(){ const data={versao:1, geradoEm:new Date().toISOString(), vendas, precos, config:[cfg]}; const b=new Blob([JSON.stringify(data,null,1)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`backup-baterias-${hoje()}.json`; a.click(); }
+  async function restaurar(f){ try{ const d=JSON.parse(await f.text()); if(!Array.isArray(d.vendas)) throw new Error('arquivo inválido'); if(!confirm(`Importar ${d.vendas.length} vendas e ${(d.precos||[]).length} preços? Registros com o mesmo ID serão substituídos.`)) return;
+    await store.putMany('vendas', d.vendas); if(d.precos) await store.putMany('precos', d.precos); if(d.config?.[0]) await store.put('config', {...d.config[0], id:'geral'}); toast('Backup importado'); }catch(e){ toast('Erro: '+e.message); } }
+  return <>
+    <h1>Configurações</h1><div className="sub">Parâmetros de cálculo, backup e modo de armazenamento</div>
+    {isAdmin && <div className="card"><h2>Cálculo</h2><div className="fg">
+      <div><label className="lb">Imposto sobre o lucro (%)</label><input className="f" inputMode="decimal" value={c.imp} onChange={e=>setC({...c,imp:e.target.value})}/></div>
+      <div><label className="lb">Meta de margem líquida (%)</label><input className="f" inputMode="decimal" value={c.meta} onChange={e=>setC({...c,meta:e.target.value})}/></div>
+      <div className="c2" style={{alignSelf:'end'}}><button className="btn pri" onClick={salvar}>Salvar</button></div>
+    </div><p className="small muted">Fórmulas iguais às da planilha: Custo = Indicador + Carregador + Bateria · Lucro s/ imposto = Venda − Custo · Lucro c/ imposto = Lucro × (1 − imposto) · Margem = Lucro c/ imposto ÷ Venda.</p></div>}
+    <div className="card"><h2>Armazenamento</h2>
+      {CLOUD ? <p>☁️ <b>Modo nuvem (Firebase)</b> — dados compartilhados em tempo real entre todos os usuários. Projeto: <code>{CFG.projectId}</code></p>
+      : <><p>💾 <b>Modo local</b> — os dados ficam salvos somente neste navegador/aparelho.</p><p className="small muted">Para dar acesso a outros usuários, configure o Firebase no arquivo <code>firebase-config.js</code> (passo a passo no README do repositório). Antes de trocar, faça um backup aqui e importe-o depois no modo nuvem.</p></>}
+      <div className="small muted">{vendas.length} vendas · {precos.length} itens de preço · {docs.length} documentos</div>
+    </div>
+    {isAdmin && <div className="card"><h2>Backup</h2><div className="row">
+      <button className="btn" onClick={backup}>⬇ Exportar backup (JSON)</button>
+      <button className="btn" onClick={()=>impRef.current.click()}>⬆ Importar backup</button><input ref={impRef} type="file" accept=".json" hidden onChange={e=>{e.target.files[0]&&restaurar(e.target.files[0]); e.target.value='';}}/>
+      <button className="btn" onClick={onSeed}>Reimportar dados da planilha (aba Jun.)</button>
+    </div><p className="small muted">O backup inclui vendas, preços e configurações. Os documentos anexados não entram no backup (ficam no armazenamento do sistema).</p></div>}
+  </>;
+}
+
+/* ================= APP ================= */
+function InstallBtn(){
+  const [ev,setEv]=useState(null); const [ios]=useState(/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone);
+  useEffect(()=>{ const h=e=>{e.preventDefault();setEv(e);}; window.addEventListener('beforeinstallprompt',h); return ()=>window.removeEventListener('beforeinstallprompt',h); },[]);
+  if (window.matchMedia('(display-mode: standalone)').matches) return null;
+  if (ev) return <button onClick={async()=>{ ev.prompt(); await ev.userChoice; setEv(null); }}>📲 Instalar app</button>;
+  if (ios) return <button onClick={()=>alert('No iPhone: toque em Compartilhar (□↑) e depois em “Adicionar à Tela de Início”.')}>📲 Instalar</button>;
+  return null;
+}
+
+function App(){
+  const [authUser,setAuthUser]=useState(CLOUD?undefined:{uid:'local',nome:'Local',papel:'admin'});
+  const [perfil,setPerfil]=useState(CLOUD?undefined:{papel:'admin',nome:'Usuário local',ativo:true});
+  useEffect(()=>{ if(!CLOUD) return; return firebase.auth().onAuthStateChanged(async u=>{ setAuthUser(u||null); if(u){ try{ const d=await CloudStore.fs.collection('usuarios').doc(u.uid).get(); setPerfil(d.exists?{...d.data(),uid:u.uid}:null); }catch(e){ setPerfil(null); } } else setPerfil(undefined); }); },[]);
+  const liberado = !!(authUser && perfil && perfil.ativo);
+  const vendasR = useCol('vendas', liberado), precosR = useCol('precos', liberado), cfgR = useCol('config', liberado), docsR = useCol('documentos', liberado);
+  const [tab,setTab]=useState(()=>location.hash.slice(1)||'painel'); const [filtroV,setFiltroV]=useState(null); const [docModelo,setDocModelo]=useState(null);
+  const [novaAberta,setNovaAberta]=useState(false);
+  const [bannerOk,setBannerOk]=useState(()=>!!localStorage.getItem('cb-banner-ok'));
+  useEffect(()=>{ location.hash=tab; window.scrollTo(0,0); },[tab]);
+  const isAdmin = perfil?.papel==='admin';
+  const cfg = {...CONFIG_PADRAO, ...((cfgR||[]).find(c=>c.id==='geral')||{})};
+  const seededRef = useRef(false);
+
+  async function seed(force){
+    if (force && !confirm('Importar as 17 vendas e a tabela de preços da planilha (aba Jun.)? Registros com o mesmo ID serão substituídos.')) return;
+    await store.putMany('precos', SEED_PRECOS.map(p=>({...p, atualizadoEm:null})));
+    await store.putMany('vendas', SEED_VENDAS.map(v=>({...v, criadoPor:authUser?.uid||null})));
+    await store.put('config', CONFIG_PADRAO);
+    toast('Dados da planilha importados');
+  }
+  // Primeiro uso no modo local: carrega a planilha automaticamente
+  useEffect(()=>{ if(!CLOUD && vendasR && precosR && !vendasR.length && !precosR.length && !seededRef.current && !localStorage.getItem('cb-seeded')){ seededRef.current=true; localStorage.setItem('cb-seeded','1'); seed(false); } },[vendasR,precosR]);
+
+  if (CLOUD && authUser===undefined) return <div className="empty" style={{paddingTop:80}}>Carregando…</div>;
+  if (CLOUD && !authUser) return <><Login/><Toaster/></>;
+  if (CLOUD && perfil===undefined) return <div className="empty" style={{paddingTop:80}}>Carregando…</div>;
+  if (CLOUD && (!perfil || !perfil.ativo)) return <div className="login"><div className="box"><h2>Acesso não liberado</h2><p>Sua conta ({authUser.email}) ainda não foi liberada ou está bloqueada. Peça ao administrador para cadastrá-lo.</p><button className="btn" onClick={()=>firebase.auth().signOut()}>Sair</button></div></div>;
+  if (!vendasR || !precosR || !cfgR || !docsR) return <div className="empty" style={{paddingTop:80}}>Carregando dados…</div>;
+
+  const user = {uid:authUser.uid};
+  async function salvarVenda(v, continuar){
+    const n = {...v, id:v.id||uid(), criadoEm:v.criadoEm||Date.now(), criadoPor:v.criadoPor||authUser.uid||null};
+    await store.put('vendas', n); toast('Venda salva ✔');
+    if(!continuar){ setNovaAberta(false); if(tab==='nova') setTab('vendas'); }
+  }
+  const tabs = [
+    ['painel','Painel','📊'], ['vendas','Vendas','🧾'], ['nova','Nova venda','➕'],
+    ...(isAdmin?[['precos','Preços','🏷️']]:[]), ['docs','Documentos','📎'],
+    ...(CLOUD&&isAdmin?[['usuarios','Usuários','👥']]:[]), ['config','Config.','⚙️'],
+  ];
+  const irPara = (t,f) => { if(t==='vendas') setFiltroV(f||null); setTab(t); };
+  const abrirDocs = m => { setDocModelo(m); setTab('docs'); };
+  const semCloudBanner = !CLOUD && !bannerOk;
+
+  return <>
+    <header className="top"><div className="topin">
+      <div className="logo"><div className="ic">⚡</div>Controle de Baterias</div>
+      <nav className="nav">{tabs.map(([k,l])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}>{l}</button>)}</nav>
+      <div className="sp"/>
+      <div className="who"><InstallBtn/><span className="nm">{perfil.nome}{isAdmin?' · admin':''}</span>{CLOUD&&<button onClick={()=>firebase.auth().signOut()}>Sair</button>}</div>
+    </div></header>
+    <main>
+      {semCloudBanner && <div className="banner">💾 Modo local: os dados estão salvos só neste aparelho. Para liberar outros usuários, configure o Firebase (veja o README).<div className="sp"/><button className="btn sm" onClick={()=>{localStorage.setItem('cb-banner-ok','1'); setBannerOk(true);}}>Entendi</button></div>}
+      {tab==='painel' && <Painel vendas={vendasR} cfg={cfg} isAdmin={isAdmin} irPara={irPara}/>}
+      {tab==='vendas' && <Vendas vendas={vendasR} precos={precosR} cfg={cfg} isAdmin={isAdmin} user={user} filtroInicial={filtroV} onDocs={abrirDocs}/>}
+      {tab==='nova' && <><h1>Nova venda</h1><div className="sub">Entrada rápida — custos preenchidos pela tabela de preços</div><div className="card"><VendaForm precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda}/></div></>}
+      {tab==='precos' && isAdmin && <Precos precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin}/>}
+      {tab==='docs' && <Documentos docs={docsR} precos={precosR} isAdmin={isAdmin} modeloInicial={docModelo}/>}
+      {tab==='usuarios' && CLOUD && isAdmin && <Usuarios me={user}/>}
+      {tab==='config' && CLOUD && isAdmin && <div className="mobonly" style={{marginBottom:12}}><button className="btn" onClick={()=>setTab('usuarios')}>👥 Gerenciar usuários</button></div>}
+      {tab==='config' && <Config cfg={cfg} vendas={vendasR} precos={precosR} docs={docsR} isAdmin={isAdmin} onSeed={()=>seed(true)}/>}
+      {CLOUD && isAdmin && !vendasR.length && !precosR.length && tab!=='config' && <div className="card row"><span>O banco está vazio.</span><div className="sp"/><button className="btn pri" onClick={()=>seed(false)}>Importar dados da planilha (aba Jun.)</button></div>}
+    </main>
+    {tab!=='nova' && <button className="fab" onClick={()=>setNovaAberta(true)} aria-label="Nova venda">+</button>}
+    <nav className="bnav">{tabs.filter(([k])=>['painel','vendas','nova','precos','docs','config'].includes(k)).map(([k,l,i])=><button key={k} className={tab===k?'on':''} onClick={()=>{ if(k==='vendas') setFiltroV(null); if(k==='docs') setDocModelo(null); setTab(k);}}><span>{i}</span>{l}</button>)}</nav>
+    {novaAberta && <Modal title="Nova venda" wide onClose={()=>setNovaAberta(false)}><VendaForm precos={precosR} vendas={vendasR} cfg={cfg} isAdmin={isAdmin} onSalvar={salvarVenda} onCancel={()=>setNovaAberta(false)}/></Modal>}
+    <Toaster/>
+  </>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
