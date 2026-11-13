@@ -56,7 +56,7 @@ input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--accent);box-sha
 label.lb{display:block;font-size:12px;color:var(--ink2);margin-bottom:4px;font-weight:600}
 .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .fg .c2{grid-column:span 2} .fg .c3{grid-column:span 3} .fg .c4{grid-column:1/-1}
-table.tv td,table.tv th{padding:8px 6px} table.tv td{font-size:13px} table.tv td:not(:nth-child(3)){white-space:nowrap}
+table.tv td,table.tv th,table.tc td,table.tc th{padding:8px 6px} table.tc td{font-size:13px} table.tv td{font-size:13px} table.tv td:not(:nth-child(3)){white-space:nowrap}
 @media (max-width:1250px){ .nav .nl{display:none} .nav .ni{margin:0;font-size:18px} .nav button{padding:8px 12px} }
 table{width:100%;border-collapse:collapse}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:600}
@@ -658,9 +658,9 @@ const CAMPOS_CLI = [['nome','Nome / apelido'],['razao','Razão social'],['doc','
 function mapearColuna(h){
   const k = normaliza(h);
   if (/fantasia|apelido/.test(k)) return 'nome';
-  if (/razao/.test(k)) return 'razao';
+  if (/razao|nome do cliente|cliente\/fornecedor/.test(k)) return 'razao';
   if (/cnpj|cpf|documento/.test(k)) return 'doc';
-  if (/^ie$|inscri/.test(k)) return 'ie';
+  if (/^ie$|inscri|insc\.? ?est/.test(k)) return 'ie';
   if (/contato|responsavel|comprador/.test(k)) return 'contato';
   if (/e-?mail/.test(k)) return 'email';
   if (/fone|celular|whats/.test(k)) return 'telefone';
@@ -678,7 +678,7 @@ function mapearColuna(h){
 function lerClientesPlanilha(rows){
   return rows.map(r=>{ const c={}; Object.entries(r).forEach(([h,val])=>{ const k=mapearColuna(h); const s=String(val??'').trim(); if(k&&s&&!c[k]) c[k]=s; });
     if (c.numero) c.endereco = [c.endereco, c.numero].filter(Boolean).join(', '); if (c.complemento) c.endereco = [c.endereco, c.complemento].filter(Boolean).join(' – ');
-    delete c.numero; delete c.complemento; if(!c.nome && c.razao) c.nome=c.razao; return c; }).filter(c=>c.nome);
+    delete c.numero; delete c.complemento; if(!c.nome && c.razao) c.nome=c.razao; return c; }).filter(c=>c.nome && /[a-zà-ú]/i.test(c.nome) && !/^total d/i.test(normaliza(c.nome)));
 }
 function ClienteForm({c, onSalvar, onExcluir}){
   const [v,setV]=useState(c);
@@ -697,7 +697,7 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
   async function salvar(c){ await store.put('clientes',{...c,id:c.id||uid(),atualizadoEm:Date.now()}); setEdit(null); toast('Cliente salvo'); }
   async function excluir(c){ if(confirm(`Excluir o cliente ${c.nome}? As vendas dele não são apagadas.`)){ await store.del('clientes',c.id); setEdit(null); } }
   async function lerArquivo(f){
-    try{ const wb = XLSX.read(await f.arrayBuffer(), {type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]];
+    try{ const wb = /\.html?$/i.test(f.name) ? XLSX.read(await f.text(), {type:'string'}) : XLSX.read(await f.arrayBuffer(), {type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]];
       let rows = XLSX.utils.sheet_to_json(ws,{defval:''});
       // se o cabeçalho não está na 1ª linha, procura a linha com "nome"/"razão"/"cnpj"
       if (!rows.length || Object.keys(rows[0]).filter(mapearColuna).length<2) { const aoa = XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); const hi = aoa.findIndex(r=>r.filter(c=>mapearColuna(String(c))).length>=2); if(hi>=0){ const hd=aoa[hi].map(String); rows = aoa.slice(hi+1).map(r=>Object.fromEntries(hd.map((h,i)=>[h,r[i]]))); } }
@@ -713,12 +713,12 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
   return <>
     <div className="row" style={{marginBottom:14}}><div><h1>Clientes</h1><div className="sub" style={{margin:0}}>{clientes.length} cadastrado(s) — aparecem para seleção ao lançar uma venda</div></div><div className="sp"/>
       <input className="f" style={{maxWidth:240}} placeholder="🔍 Nome, CNPJ, cidade…" value={q} onChange={e=>setQ(e.target.value)}/>
-      <button className="btn" onClick={()=>ref.current.click()}>⬆ Importar planilha</button><input ref={ref} type="file" accept=".xlsx,.xls,.csv" hidden onChange={e=>{e.target.files[0]&&lerArquivo(e.target.files[0]); e.target.value='';}}/>
+      <button className="btn" onClick={()=>ref.current.click()}>⬆ Importar planilha</button><input ref={ref} type="file" accept=".xlsx,.xls,.csv,.html,.htm" hidden onChange={e=>{e.target.files[0]&&lerArquivo(e.target.files[0]); e.target.value='';}}/>
       <button className="btn pri" onClick={()=>setEdit({nome:''})}>+ Novo cliente</button></div>
-    {lista.length ? <div className="card desk" style={{padding:6}}><table className="tv"><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Cidade</th><th>Contato</th><th>Telefone</th><th className="n">Baterias</th><th className="n">Total comprado</th><th>Última compra</th><th/></tr></thead>
+    {lista.length ? <div className="card desk" style={{padding:6}}><table className="tc"><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Telefone / e-mail</th><th>Cidade</th><th className="n">Baterias</th><th className="n">Comprado</th><th>Última</th><th/></tr></thead>
       <tbody>{lista.map(c=>{ const r=resDe(c); return <tr key={c.id}>
-        <td><b>{c.nome}</b>{c.razao&&c.razao!==c.nome&&<div className="small muted">{c.razao}</div>}</td><td>{c.doc||'—'}</td><td>{[c.cidade,c.uf].filter(Boolean).join('/')||'—'}</td><td>{c.contato||'—'}</td><td>{c.telefone||'—'}</td>
-        <td className="n">{r?.q||0}</td><td className="n">{r?brl(r.venda):'—'}</td><td>{r?.ult?dataBR(r.ult):'—'}</td>
+        <td><b>{c.nome}</b>{c.razao&&c.razao!==c.nome&&<div className="small muted">{c.razao}</div>}</td><td style={{whiteSpace:'nowrap'}}>{c.doc||'—'}</td><td className="small">{c.contato&&<div>{c.contato}</div>}{c.telefone&&<div>{c.telefone}</div>}{c.email&&<div className="muted" style={{wordBreak:'break-all'}}>{c.email}</div>}{!c.telefone&&!c.email&&!c.contato&&'—'}</td><td>{[c.cidade,c.uf].filter(Boolean).join('/')||'—'}</td>
+        <td className="n">{r?.q||0}</td><td className="n" style={{whiteSpace:'nowrap'}}>{r?brl(r.venda):'—'}</td><td style={{whiteSpace:'nowrap'}}>{r?.ult?dataBR(r.ult):'—'}</td>
         <td style={{whiteSpace:'nowrap'}}><button className="ib" title="Nova venda para este cliente" onClick={()=>onNovaVenda(c)}>➕</button><button className="ib" title="Editar" onClick={()=>setEdit(c)}>✏️</button></td></tr>; })}</tbody></table></div>
     : <div className="card empty">{clientes.length?'Nenhum cliente encontrado.':'Nenhum cliente cadastrado. Use “Importar planilha” para trazer sua lista de clientes ou “+ Novo cliente”.'}</div>}
     <div className="mcards">{lista.map(c=>{ const r=resDe(c); return <div className="mc" key={c.id} onClick={()=>setEdit(c)}>
