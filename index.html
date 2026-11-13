@@ -750,12 +750,18 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
       const lidos = lerClientesPlanilha(rows);
       const chave = c => c.doc ? 'd:'+String(c.doc).replace(/\D/g,'') : 'n:'+normaliza(c.nome);
       const exist = new Map(clientes.map(c=>[chave(c),c]));
-      const novos=[], atualiza=[];
-      lidos.forEach(c=>{ const e=exist.get(chave(c)); if(e) atualiza.push({...e,...c}); else { novos.push({...c,id:uid()}); exist.set(chave(c),c); } });
-      setImp({arquivo:f.name, novos, atualiza});
+      const novos=[], atualiza=[], vistos=new Set();
+      lidos.forEach(c=>{ const k=chave(c); if(vistos.has(k)) return; vistos.add(k); const e=exist.get(k); if(e&&e.id) atualiza.push({...e,...c}); else { novos.push({...c,id:uid()}); exist.set(k,c); } });
+      const usadosEmVenda = new Set(vendas.map(v=>v.clienteId).filter(Boolean));
+      const fora = clientes.filter(c=>!vistos.has(chave(c)));
+      setImp({arquivo:f.name, novos, atualiza, remover: fora.filter(c=>!usadosEmVenda.has(c.id)), manter: fora.filter(c=>usadosEmVenda.has(c.id)), modo: clientes.length?'substituir':'somar'});
     }catch(e){ toast('Não consegui ler o arquivo: '+e.message); }
   }
-  async function confirmarImport(){ await store.putMany('clientes',[...imp.novos,...imp.atualiza].map(c=>({...c,atualizadoEm:Date.now()}))); toast(`${imp.novos.length} cliente(s) novo(s), ${imp.atualiza.length} atualizado(s)`); setImp(null); }
+  async function confirmarImport(){
+    setImp(o=>({...o,busy:true}));
+    await store.putMany('clientes',[...imp.novos,...imp.atualiza].map(c=>({...c,atualizadoEm:Date.now()})));
+    let rem=0; if(imp.modo==='substituir'){ for(const c of imp.remover){ await store.del('clientes',c.id); rem++; } }
+    toast(`${imp.novos.length} novo(s), ${imp.atualiza.length} atualizado(s)${rem?`, ${rem} removido(s)`:''}`); setImp(null); }
   return <>
     <div className="row" style={{marginBottom:14}}><div><h1>Clientes</h1><div className="sub" style={{margin:0}}>{clientes.length} cadastrado(s) — aparecem para seleção ao lançar uma venda</div></div><div className="sp"/>
       <input className="f" style={{maxWidth:240}} placeholder="🔍 Qualquer parte do nome, CNPJ, cidade…" value={q} onChange={e=>setQ(e.target.value)}/>
@@ -772,10 +778,15 @@ function Clientes({clientes, vendas, cfg, isAdmin, onNovaVenda}){
       <div className="r2"><span>{c.doc||''} {[c.cidade,c.uf].filter(Boolean).join('/')}</span><span>{c.telefone||''}</span></div></div>; })}</div>
     {edit && <Modal title={edit.id?'Editar cliente':'Novo cliente'} onClose={()=>setEdit(null)} wide><ClienteForm c={edit} onSalvar={salvar} onExcluir={edit.id?()=>excluir(edit):null}/></Modal>}
     {imp && <Modal title={`Importar clientes — ${imp.arquivo}`} onClose={()=>setImp(null)} wide>
-      <p><b>{imp.novos.length}</b> cliente(s) novo(s) · <b>{imp.atualiza.length}</b> já cadastrado(s) serão atualizados.</p>
+      <p><b>{imp.novos.length}</b> cliente(s) novo(s) · <b>{imp.atualiza.length}</b> já cadastrado(s) serão atualizados (sem duplicar).</p>
+      {(imp.remover.length+imp.manter.length)>0 && <div className="card" style={{background:'#fafbfd',boxShadow:'none',border:'1px solid var(--line)'}}>
+        <div className="small" style={{marginBottom:8}}><b>{imp.remover.length+imp.manter.length}</b> cliente(s) cadastrado(s) <b>não estão</b> neste arquivo. O que fazer com eles?</div>
+        <label className="row small" style={{gap:6,marginBottom:6,cursor:'pointer'}}><input type="radio" checked={imp.modo==='substituir'} onChange={()=>setImp({...imp,modo:'substituir'})}/> <b>Substituir a lista</b> — remover os {imp.remover.length} que não estão no arquivo{imp.manter.length>0&&<span className="muted"> ({imp.manter.length} com vendas lançadas serão mantidos)</span>}</label>
+        <label className="row small" style={{gap:6,cursor:'pointer'}}><input type="radio" checked={imp.modo==='somar'} onChange={()=>setImp({...imp,modo:'somar'})}/> <b>Manter todos</b> — só adicionar os novos e atualizar os existentes</label>
+      </div>}
       <div style={{maxHeight:'50vh',overflow:'auto'}}><table><thead><tr><th>Nome</th><th>CNPJ/CPF</th><th>Cidade</th><th>Telefone</th><th></th></tr></thead>
         <tbody>{[...imp.novos.map(c=>[c,'novo']),...imp.atualiza.map(c=>[c,'atualiza'])].slice(0,500).map(([c,t],i)=><tr key={i}><td>{c.nome}</td><td>{c.doc||''}</td><td>{[c.cidade,c.uf].filter(Boolean).join('/')}</td><td>{c.telefone||''}</td><td><span className={'pill '+(t==='novo'?'p-ok':'p-gray')}>{t}</span></td></tr>)}</tbody></table></div>
-      <div className="row" style={{marginTop:14,justifyContent:'flex-end'}}><button className="btn" onClick={()=>setImp(null)}>Cancelar</button><button className="btn pri" disabled={!imp.novos.length&&!imp.atualiza.length} onClick={confirmarImport}>Importar</button></div>
+      <div className="row" style={{marginTop:14,justifyContent:'flex-end'}}><button className="btn" onClick={()=>setImp(null)}>Cancelar</button><button className="btn pri" disabled={imp.busy||(!imp.novos.length&&!imp.atualiza.length&&!(imp.modo==='substituir'&&imp.remover.length))} onClick={confirmarImport}>{imp.busy?'Importando…':imp.modo==='substituir'&&imp.remover.length?'Importar e substituir':'Importar'}</button></div>
     </Modal>}
   </>;
 }
