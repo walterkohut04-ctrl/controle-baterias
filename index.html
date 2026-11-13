@@ -811,12 +811,13 @@ function Precos({precos, vendas, cfg, isAdmin}){
     {[...cats,...outras].map(cat=>{ const itens = precos.filter(p=>p.categoria===cat).sort((a,b)=>a.modelo.localeCompare(b.modelo)); if(!itens.length) return null;
       return <div className="card" key={cat} style={{padding:6}}>
         <h2 style={{padding:'8px 8px 0'}}>{cat==='Bateria'?'🔋':cat==='Carregador'?'🔌':cat==='Indicador'?'📟':'📦'} {cat}</h2>
-        <div className="scroll"><table><thead><tr><th>Modelo</th><th className="n">Valor antigo</th><th className="n">Valor atual</th><th className="n">Variação</th>
+        <div className="scroll"><table><thead><tr><th>Modelo</th><th className="n">Preço atual</th><th className="n">Preço antigo</th><th className="n">Variação</th><th>Aplicação</th>
           {cat==='Bateria'&&<th className="n">Venda sugerida*</th>}{cat==='Bateria'&&<th>Última venda</th>}<th>Atualizado</th><th/></tr></thead>
         <tbody>{itens.map(p=>{ const varr = num(p.valorAntigo)? (p.valor-num(p.valorAntigo))/num(p.valorAntigo) : 0; const uv = cat==='Bateria'&&ultimaVenda(p.modelo);
           const ind = precos.find(x=>x.categoria==='Indicador'); const sug = precoSugerido(num(p.valor)+num(ind?.valor), cfg.metaMargem, cfg.imposto);
-          return <tr key={p.id}><td><b>{p.modelo}</b></td><td className="n muted">{p.valorAntigo!=null&&p.valorAntigo!==''?brl(p.valorAntigo):'—'}</td><td className="n"><b>{brl(p.valor)}</b></td>
+          return <tr key={p.id}><td style={{whiteSpace:'nowrap'}}><b>{p.modelo}</b></td><td className="n"><b>{brl(p.valor)}</b></td><td className="n muted">{p.valorAntigo!=null&&p.valorAntigo!==''?brl(p.valorAntigo):'—'}</td>
           <td className="n"><span className={'pill '+(varr>0?'p-bad':varr<0?'p-ok':'p-gray')}>{varr>0?'▲':varr<0?'▼':''} {pct(Math.abs(varr))}</span></td>
+          <td className="small" style={{minWidth:140,maxWidth:280,color:'var(--ink2)'}}>{p.aplicacao||<span className="muted">—</span>}</td>
           {cat==='Bateria'&&<td className="n">{brl(Math.ceil(sug/50)*50)}</td>}
           {cat==='Bateria'&&<td className="small">{uv?<>{brl(uv.venda)} <span className="muted">· {uv.cliente} · {dataBR(uv.data)}</span></>:'—'}</td>}
           <td className="small muted">{p.atualizadoEm?dataBR(p.atualizadoEm):'planilha'}</td>
@@ -842,9 +843,10 @@ function PrecoForm({p,onSalvar,onExcluir,categorias=[]}){
           {outra && <input className="f" style={{marginTop:6}} autoFocus value={v.categoria} onChange={e=>setV({...v,categoria:e.target.value})} placeholder="Nome da nova categoria (ex.: Cabo, Conector)"/>}
         </>}</div>
       <div className="c2"><label className="lb">Modelo</label><input className="f" value={v.modelo} onChange={e=>setV({...v,modelo:e.target.value})} disabled={!!p.id} placeholder="Ex.: 24V230AH"/></div>
+      <div className="c2"><label className="lb">{p.id?'Novo preço atual (custo)':'Preço atual'}</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus={!!p.id} placeholder="0,00"/></div>
       {!p.id&&<div className="c2"><label className="lb">Preço antigo</label><Money value={v.valorAntigo??''} onChange={x=>setV({...v,valorAntigo:x})} placeholder="0,00"/></div>}
-      <div className="c2"><label className="lb">{p.id?'Novo valor (custo)':'Preço atual'}</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus={!!p.id} placeholder="0,00"/></div>
-      {p.id&&<div className="c2"><label className="lb">Valor atual</label><div style={{padding:'9px 0'}}>{brl(p.valor)} <span className="small muted">→ passa a ser o “valor antigo”</span></div></div>}
+      {p.id&&<div className="c2"><label className="lb">Preço atual hoje</label><div style={{padding:'9px 0'}}>{brl(p.valor)} <span className="small muted">→ se mudar, passa a ser o “preço antigo”</span></div></div>}
+      <div className="c4"><label className="lb">Aplicação</label><textarea className="f" rows="2" value={v.aplicacao||''} onChange={e=>setV({...v,aplicacao:e.target.value})} placeholder="Ex.: Genie GS-1932 / GS-2632, JLG 1930ES, Skyjack SJIII 3219…"/></div>
     </div>
     {p.historico?.length>0&&<div className="small muted" style={{marginTop:10}}>Histórico: {p.historico.slice().reverse().map(h=>`${brl(h.valor)} (até ${dataBR(h.ate)})`).join(' · ')}</div>}
     <div className="row" style={{marginTop:16}}>{onExcluir&&<button type="button" className="btn danger" onClick={onExcluir}>Excluir item</button>}<div className="sp"/><button className="btn pri">Salvar</button></div>
