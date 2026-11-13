@@ -177,7 +177,7 @@ const SEED_VENDAS = SEED_VENDAS_RAW.map((r,i)=>({
 }));
 const CONFIG_PADRAO = { id:'geral', imposto:0.24, metaMargem:0.20 };
 const COND_PGTO = ['À vista','30','30/60','30/60/90','30/60/90/120','A definir'];
-const TIPOS_DOC = ['Ficha técnica','Certificado / Laudo','Manual','Garantia','Nota fiscal','Foto','Proposta','Outro'];
+const TIPOS_DOC = ['Ficha técnica','Certificado / Laudo','Manual','Garantia','Sistema','Nota fiscal','Foto','Proposta','Outro'];
 
 /* ================= UTILITÁRIOS ================= */
 const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -854,7 +854,7 @@ function PrecoForm({p,onSalvar,onExcluir,categorias=[]}){
 }
 
 /* ================= DOCUMENTOS ================= */
-const corTipo = (mime,nome) => { const e=(nome.split('.').pop()||'').toLowerCase(); if(e==='pdf') return ['PDF','#d64545']; if(/png|jpe?g|webp|gif|heic/.test(e)) return ['IMG','#2f6fb3']; if(/xlsx?|csv/.test(e)) return ['XLS','#1f8a4c']; if(/docx?/.test(e)) return ['DOC','#2463eb']; return [e.slice(0,4).toUpperCase()||'ARQ','#6b7280']; };
+const corTipo = (mime,nome) => { const e=(nome.split('.').pop()||'').toLowerCase(); if(e==='pdf') return ['PDF','#d64545']; if(/png|jpe?g|webp|gif|heic/.test(e)) return ['IMG','#2f6fb3']; if(/xlsx?|csv/.test(e)) return ['XLS','#1f8a4c']; if(/docx?/.test(e)) return ['DOC','#2463eb']; if(/apk|exe|msi|zip|rar|7z|ipa/.test(e)) return [e.toUpperCase().slice(0,4),'#7c3aed']; return [e.slice(0,4).toUpperCase()||'ARQ','#6b7280']; };
 
 function Documentos({docs:todosDocs, precos, isAdmin, modeloInicial}){
   const docs = useMemo(()=>todosDocs.filter(d=>!d.vendaId),[todosDocs]);
