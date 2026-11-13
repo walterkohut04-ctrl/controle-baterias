@@ -810,7 +810,7 @@ function Precos({precos, vendas, cfg, isAdmin}){
       {isAdmin&&<button className="btn pri" onClick={()=>setEdit({id:'',categoria:'Bateria',modelo:'',valorAntigo:'',valor:''})}>+ Novo item</button>}</div>
     {[...cats,...outras].map(cat=>{ const itens = precos.filter(p=>p.categoria===cat).sort((a,b)=>a.modelo.localeCompare(b.modelo)); if(!itens.length) return null;
       return <div className="card" key={cat} style={{padding:6}}>
-        <h2 style={{padding:'8px 8px 0'}}>{cat==='Bateria'?'🔋':cat==='Carregador'?'🔌':'📟'} {cat}</h2>
+        <h2 style={{padding:'8px 8px 0'}}>{cat==='Bateria'?'🔋':cat==='Carregador'?'🔌':cat==='Indicador'?'📟':'📦'} {cat}</h2>
         <div className="scroll"><table><thead><tr><th>Modelo</th><th className="n">Valor antigo</th><th className="n">Valor atual</th><th className="n">Variação</th>
           {cat==='Bateria'&&<th className="n">Venda sugerida*</th>}{cat==='Bateria'&&<th>Última venda</th>}<th>Atualizado</th><th/></tr></thead>
         <tbody>{itens.map(p=>{ const varr = num(p.valorAntigo)? (p.valor-num(p.valorAntigo))/num(p.valorAntigo) : 0; const uv = cat==='Bateria'&&ultimaVenda(p.modelo);
@@ -824,15 +824,23 @@ function Precos({precos, vendas, cfg, isAdmin}){
       </div>; })}
     <p className="small muted">* Venda sugerida = (bateria + indicador) para atingir a meta de margem líquida de {pct(cfg.metaMargem)} com imposto de {pct(cfg.imposto)} sobre o lucro. Sem carregador.</p>
     {edit && <Modal title={edit.id?'Atualizar preço':'Novo item'} onClose={()=>setEdit(null)}>
-      <PrecoForm p={edit} onSalvar={p=>salvar({...p,id:p.id||(p.categoria.slice(0,3).toLowerCase()+'-'+p.modelo.toLowerCase().replace(/[^a-z0-9]+/g,''))})} onExcluir={edit.id?()=>excluir(edit):null}/>
+      <PrecoForm p={edit} categorias={precos.map(x=>x.categoria)} onSalvar={p=>salvar({...p,id:p.id||(p.categoria.slice(0,3).toLowerCase()+'-'+p.modelo.toLowerCase().replace(/[^a-z0-9]+/g,''))})} onExcluir={edit.id?()=>excluir(edit):null}/>
     </Modal>}
   </>;
 }
-function PrecoForm({p,onSalvar,onExcluir}){
-  const [v,setV]=useState(p);
-  return <form onSubmit={e=>{e.preventDefault(); if(!v.modelo.trim()||!num(v.valor)) return toast('Preencha modelo e valor'); onSalvar({...v,modelo:v.modelo.trim()});}}>
+function PrecoForm({p,onSalvar,onExcluir,categorias=[]}){
+  const [v,setV]=useState(p); const [outra,setOutra]=useState(false);
+  const cats = [...new Set(['Bateria','Carregador','Indicador',...categorias])];
+  return <form onSubmit={e=>{e.preventDefault(); if(!String(v.categoria||'').trim()) return toast('Informe a categoria'); if(!v.modelo.trim()||!num(v.valor)) return toast('Preencha modelo e valor'); onSalvar({...v,categoria:v.categoria.trim(),modelo:v.modelo.trim()});}}>
     <div className="fg">
-      <div className="c2"><label className="lb">Categoria</label><input className="f" list="dl-cat" value={v.categoria} onChange={e=>setV({...v,categoria:e.target.value})} disabled={!!p.id}/><datalist id="dl-cat"><option value="Bateria"/><option value="Carregador"/><option value="Indicador"/></datalist></div>
+      <div className="c2"><label className="lb">Categoria</label>
+        {p.id ? <input className="f" value={v.categoria} disabled/> : <>
+          <select className="f" value={outra?'__outra':v.categoria} onChange={e=>{ if(e.target.value==='__outra'){ setOutra(true); setV({...v,categoria:''}); } else { setOutra(false); setV({...v,categoria:e.target.value}); } }}>
+            {cats.map(c=><option key={c} value={c}>{c}</option>)}
+            <option value="__outra">+ Outra categoria…</option>
+          </select>
+          {outra && <input className="f" style={{marginTop:6}} autoFocus value={v.categoria} onChange={e=>setV({...v,categoria:e.target.value})} placeholder="Nome da nova categoria (ex.: Cabo, Conector)"/>}
+        </>}</div>
       <div className="c2"><label className="lb">Modelo</label><input className="f" value={v.modelo} onChange={e=>setV({...v,modelo:e.target.value})} disabled={!!p.id} placeholder="Ex.: 24V230AH"/></div>
       {!p.id&&<div className="c2"><label className="lb">Preço antigo</label><Money value={v.valorAntigo??''} onChange={x=>setV({...v,valorAntigo:x})} placeholder="0,00"/></div>}
       <div className="c2"><label className="lb">{p.id?'Novo valor (custo)':'Preço atual'}</label><Money value={v.valor} onChange={x=>setV({...v,valor:x})} autoFocus={!!p.id} placeholder="0,00"/></div>
