@@ -127,13 +127,9 @@ td.n,th.n{text-align:right;white-space:nowrap}
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script>
-  if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
-    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script>');
-    if (window.USAR_LOGIN === true) document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>');
-    document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"><\/script>');
-  }
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>if (window.USAR_LOGIN === true) document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><\/script>');</script>
 </head>
 <body>
 <div id="root"><div style="padding:40px;text-align:center;color:#8a93a6">Carregando…</div></div>
@@ -202,6 +198,8 @@ function calc(v, imposto){
   const margem = venda ? lucroLiq/venda : NaN;
   return { q, custoUn, custo, venda, lucroBruto, imposto: lucroBruto*imposto, lucroLiq, margem };
 }
+// Comissão: por padrão é o lucro c/ imposto; se informado, vale o valor efetivamente recebido
+function comissao(v, imposto){ const c=calc(v,imposto); const rec = v.status==='ok' && v.valorRecebido!=null && v.valorRecebido!=='' ? num(v.valorRecebido) : c.lucroLiq; return {prevista:c.lucroLiq, recebida: v.status==='ok'?rec:0, aReceber: v.status==='ok'?0:c.lucroLiq}; }
 function margemClasse(m, meta){ if(!isFinite(m)) return ''; if(m<=0) return 'm-bad'; if(m<meta*0.75) return 'm-warn'; return 'm-ok'; }
 // preço para atingir margem líquida m: V = C / (1 - m/(1-t))
 function precoSugerido(custoUn, meta, imposto){ const d = 1 - meta/(1-imposto); return d>0 ? custoUn/d : NaN; }
@@ -358,6 +356,7 @@ function Painel({vendas, cfg, isAdmin, irPara}){
   const porCli = agrupa('cliente'), porMod = agrupa('modelo');
   const maxCli = Math.max(1,...porCli.map(x=>x.venda));
   const abertos = fil.filter(v=>v.status!=='ok');
+  const com = fil.reduce((a,v)=>{ const k=comissao(v,cfg.imposto); a.rec+=k.recebida; a.arec+=k.aReceber; return a; },{rec:0,arec:0});
   const aDefinir = fil.filter(v=>/definir/i.test(v.condPgto||''));
   const baixas = fil.filter(v=>calc(v,cfg.imposto).margem < cfg.metaMargem*0.75);
 
@@ -375,6 +374,10 @@ function Painel({vendas, cfg, isAdmin, irPara}){
       <div className="kpi"><div className="l">Lucro bruto</div><div className="v">{brl(t.lb)}</div></div>
       <div className="kpi"><div className="l">Lucro líquido</div><div className="v">{brl(t.ll)}</div></div>
       <div className="kpi hl"><div className="l">Margem de lucro</div><div className="v">{pct(margem)}</div></div>
+    </div> : null}
+    {isAdmin ? <div className="grid" style={{gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',marginBottom:16}}>
+      <a href="#" onClick={e=>{e.preventDefault();irPara('vendas','aberto');}} className="kpi" style={{textDecoration:'none',color:'inherit',borderLeft:'4px solid var(--warn)'}}><div className="l">⏳ Comissão a receber ({abertos.length})</div><div className="v" style={{color:'var(--warn)'}}>{brl(com.arec)}</div></a>
+      <a href="#" onClick={e=>{e.preventDefault();irPara('vendas','ok');}} className="kpi" style={{textDecoration:'none',color:'inherit',borderLeft:'4px solid var(--ok)'}}><div className="l">✅ Comissão recebida ({fil.length-abertos.length})</div><div className="v" style={{color:'var(--ok)'}}>{brl(com.rec)}</div></a>
     </div> : <div className="grid kpis" style={{marginBottom:16,gridTemplateColumns:'repeat(2,1fr)'}}>
       <div className="kpi"><div className="l">Baterias vendidas</div><div className="v">{t.q}</div></div>
       <div className="kpi hl"><div className="l">Total vendido</div><div className="v">{brl(t.venda)}</div></div>
@@ -395,7 +398,7 @@ function Painel({vendas, cfg, isAdmin, irPara}){
       <div className="card">
         <h2>Atenção</h2>
         <div style={{display:'grid',gap:8}}>
-          <a href="#" onClick={e=>{e.preventDefault();irPara('vendas','aberto');}} className="row" style={{textDecoration:'none',color:'inherit'}}><span className="pill p-warn">{abertos.length}</span> vendas em aberto</a>
+          <a href="#" onClick={e=>{e.preventDefault();irPara('vendas','aberto');}} className="row" style={{textDecoration:'none',color:'inherit'}}><span className="pill p-warn">{abertos.length}</span> comissões a receber</a>
           <div className="row"><span className="pill p-gray">{aDefinir.length}</span> com condição de pagamento “A definir”</div>
           {isAdmin && <div className="row"><span className={'pill '+(baixas.length?'p-bad':'p-ok')}>{baixas.length}</span> abaixo de {pct(cfg.metaMargem*0.75)} de margem</div>}
           {isAdmin && baixas.slice(0,5).map(v=>{ const c=calc(v,cfg.imposto); return <div key={v.id} className="small muted">• {dataBR(v.data)} · {v.cliente} · {v.modelo} — <span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span></div>; })}
@@ -442,7 +445,7 @@ function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
     if(!v.cliente.trim()) return toast('Informe o cliente');
     if(!v.modelo.trim()) return toast('Informe o modelo da bateria');
     if(!num(v.venda)) return toast('Informe o valor de venda');
-    onSalvar({...v, cliente:v.cliente.trim(), qtd:Math.max(1,num(v.qtd)||1), indicador:num(v.indicador), carregador:num(v.carregador), bateria:num(v.bateria), venda:num(v.venda)}, continuar);
+    onSalvar({...v, valorRecebido: v.status==='ok' && v.valorRecebido!=='' && v.valorRecebido!=null ? num(v.valorRecebido) : null, dataRecebimento: v.status==='ok' ? (v.dataRecebimento||hoje()) : null, cliente:v.cliente.trim(), qtd:Math.max(1,num(v.qtd)||1), indicador:num(v.indicador), carregador:num(v.carregador), bateria:num(v.bateria), venda:num(v.venda)}, continuar);
     if (continuar) setV(o=>({...novo(), data:o.data, cliente:o.cliente, condPgto:o.condPgto}));
   }
   const modelosLista = [...new Set([...bats.map(b=>b.modelo), ...(v.modelo&&!bats.some(b=>b.modelo===v.modelo)?[v.modelo]:[])])];
@@ -477,8 +480,12 @@ function VendaForm({inicial, precos, vendas, cfg, isAdmin, onSalvar, onCancel}){
           <div className="c2"><label className="lb">Condição de pagamento</label>
             <input className="f" list="dl-pg" value={v.condPgto} onChange={e=>set('condPgto',e.target.value)}/><datalist id="dl-pg">{COND_PGTO.map(x=><option key={x} value={x}/>)}</datalist>
             <div className="chips" style={{marginTop:6}}>{COND_PGTO.map(x=><button type="button" key={x} className={'chip'+(v.condPgto===x?' on':'')} onClick={()=>set('condPgto',x)}>{x}</button>)}</div></div>
-          <div className="c2"><label className="lb">Situação</label>
-            <div className="chips"><button type="button" className={'chip'+(v.status!=='ok'?' on':'')} onClick={()=>set('status','aberto')}>Em aberto</button><button type="button" className={'chip'+(v.status==='ok'?' on':'')} onClick={()=>set('status','ok')}>OK (concluída)</button></div></div>
+          <div className="c2"><label className="lb">Comissão</label>
+            <div className="chips"><button type="button" className={'chip'+(v.status!=='ok'?' on':'')} onClick={()=>set('status','aberto')}>⏳ A receber</button><button type="button" className={'chip'+(v.status==='ok'?' on':'')} onClick={()=>setV(o=>({...o,status:'ok',dataRecebimento:o.dataRecebimento||hoje()}))}>✅ Recebido</button></div></div>
+          {v.status==='ok' && <>
+            <div><label className="lb">Recebido em</label><input className="f" type="date" value={v.dataRecebimento||''} onChange={e=>set('dataRecebimento',e.target.value)}/></div>
+            {isAdmin && <div><label className="lb">Valor recebido</label><Money value={v.valorRecebido==null?'':v.valorRecebido} onChange={x=>set('valorRecebido',x)} placeholder={String(Math.round(c.lucroLiq*100)/100).replace('.',',')}/><div className="small muted">vazio = {brl(c.lucroLiq)}</div></div>}
+          </>}
           <div className="c4"><label className="lb">Observações</label><textarea className="f" rows="2" value={v.obs||''} onChange={e=>set('obs',e.target.value)}/></div>
         </div>
       </div>
@@ -514,14 +521,14 @@ function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
   const tot = lista.reduce((a,{c})=>({custo:a.custo+c.custo,venda:a.venda+c.venda,lb:a.lb+c.lucroBruto,ll:a.ll+c.lucroLiq,q:a.q+c.q}),{custo:0,venda:0,lb:0,ll:0,q:0});
   const podeEditar = v => isAdmin || v.criadoPor===user?.uid;
   const Th = ({k,children,n}) => <th className={n?'n':''} style={{cursor:'pointer'}} onClick={()=>setOrd(o=>({k,d:o.k===k?-o.d:-1}))}>{children}{ord.k===k?(ord.d>0?' ▲':' ▼'):''}</th>;
-  async function toggle(v){ if(!podeEditar(v)) return; await store.put('vendas',{...v,status:v.status==='ok'?'aberto':'ok'}); }
+  async function toggle(v){ if(!podeEditar(v)) return; const rec=v.status!=='ok'; await store.put('vendas',{...v,status:rec?'ok':'aberto',dataRecebimento:rec?hoje():null,valorRecebido:rec?(v.valorRecebido??null):null}); toast(rec?'Comissão marcada como recebida ✅ — venda finalizada':'Voltou para a receber ⏳'); }
   async function excluir(v){ if(confirm(`Excluir a venda de ${v.cliente} (${v.modelo}, ${dataBR(v.data)})?`)){ await store.del('vendas',v.id); toast('Venda excluída'); } }
   async function duplicar(v){ const n={...v,id:uid(),data:hoje(),status:'aberto',criadoEm:Date.now(),criadoPor:user?.uid||null,obs:''}; await store.put('vendas',n); toast('Venda duplicada com a data de hoje'); }
   function exportar(){
     const rows = lista.map(({v,c})=>({ 'Data Pedido':dataBR(v.data), 'Cliente':v.cliente, 'Modelo bateria':v.modelo, 'Qtd':c.q,
       ...(isAdmin?{'Indicador':num(v.indicador),'Carregador':num(v.carregador),'Bateria':num(v.bateria),'Custo Tecnopemt':c.custo}:{}),
       'Valor da Venda':c.venda, ...(isAdmin?{'Lucro S/ imposto':c.lucroBruto,[`Lucro C/ Imposto de ${Math.round(cfg.imposto*100)}%`]:c.lucroLiq,'Margem de Lucro':isFinite(c.margem)?c.margem:''}:{}),
-      'Cond. Pgto':v.condPgto, 'Situação':v.status==='ok'?'OK':'Em aberto', 'Obs':v.obs||'' }));
+      'Cond. Pgto':v.condPgto, 'Comissão':v.status==='ok'?'Recebida':'A receber', 'Recebido em':dataBR(v.dataRecebimento), ...(isAdmin?{'Valor comissão':comissao(v,cfg.imposto)[v.status==='ok'?'recebida':'aReceber']}:{}), 'Obs':v.obs||'' }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Vendas');
     if (isAdmin) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(precos.map(p=>({Categoria:p.categoria,Modelo:p.modelo,'Valor Antigo':p.valorAntigo,'Valor Atual':p.valor}))), 'Preços');
@@ -529,9 +536,9 @@ function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
   }
   return <>
     <div className="row" style={{marginBottom:14}}>
-      <div><h1>Vendas</h1><div className="sub" style={{margin:0}}>{lista.length} lançamento(s) · {tot.q} bateria(s)</div></div><div className="sp"/>
+      <div><h1>Vendas</h1><div className="sub" style={{margin:0}}>{lista.length} lançamento(s) · {tot.q} bateria(s){isAdmin&&<> · a receber <b style={{color:'var(--warn)'}}>{brl(lista.reduce((a,{v})=>a+comissao(v,cfg.imposto).aReceber,0))}</b></>}</div></div><div className="sp"/>
       <input className="f" style={{maxWidth:240}} placeholder="Buscar cliente, modelo…" value={q} onChange={e=>setQ(e.target.value)}/>
-      <div className="chips">{[['todos','Todas'],['aberto','Em aberto'],['ok','OK']].map(([k,l])=><button key={k} className={'chip'+(st===k?' on':'')} onClick={()=>setSt(k)}>{l}</button>)}</div>
+      <div className="chips">{[['todos','Todas'],['aberto','⏳ A receber'],['ok','✅ Recebidas']].map(([k,l])=><button key={k} className={'chip'+(st===k?' on':'')} onClick={()=>setSt(k)}>{l}</button>)}</div>
       <button className="btn" onClick={exportar}>⬇ Excel</button>
     </div>
     <div className="card desk" style={{padding:6}}><div className="scroll"><table>
@@ -539,7 +546,7 @@ function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
         {isAdmin&&<><th className="n">Indicador</th><th className="n">Carregador</th><th className="n">Bateria</th><Th k="custo" n>Custo</Th></>}
         <Th k="venda" n>Venda</Th>{isAdmin&&<><th className="n">Lucro s/ imp.</th><Th k="ll" n>Lucro c/ imp.</Th><Th k="margem" n>Margem</Th></>}<th>Pgto</th><th></th></tr></thead>
       <tbody>{lista.map(({v,c})=><tr key={v.id}>
-        <td><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0,cursor:podeEditar(v)?'pointer':'default'}} onClick={()=>toggle(v)} title="Clique para alternar">{v.status==='ok'?'OK':'Aberto'}</button></td>
+        <td><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0,cursor:podeEditar(v)?'pointer':'default'}} onClick={()=>toggle(v)} title={v.status==='ok'?`Comissão recebida em ${dataBR(v.dataRecebimento)||'—'} — clique para voltar a "a receber"`:'Clique quando receber a comissão'}>{v.status==='ok'?'✅ Recebido':'⏳ A receber'}</button>{v.status==='ok'&&v.dataRecebimento&&<div className="small muted" style={{marginTop:2}}>{dataBR(v.dataRecebimento)}</div>}</td>
         <td>{dataBR(v.data)}</td><td><b>{v.cliente}</b>{v.obs&&<div className="small muted" title={v.obs} style={{maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{v.obs}</div>}</td><td>{v.modelo}</td><td className="n">{c.q}</td>
         {isAdmin&&<><td className="n">{brl(v.indicador)}</td><td className="n">{brl(v.carregador)}</td><td className="n">{brl(v.bateria)}</td><td className="n">{brl(c.custo)}</td></>}
         <td className="n"><b>{brl(c.venda)}</b></td>
@@ -556,7 +563,7 @@ function Vendas({vendas, precos, cfg, isAdmin, user, filtroInicial, onDocs}){
     <div className="mcards">{lista.map(({v,c})=><div className="mc" key={v.id} onClick={()=>podeEditar(v)&&setEdit(v)}>
       <div className="r1"><span>{v.cliente}</span><span>{brl(c.venda)}</span></div>
       <div className="r2"><span>{dataBR(v.data)} · {v.modelo}{c.q>1?` ×${c.q}`:''}</span>{isAdmin&&<span className={margemClasse(c.margem,cfg.metaMargem)}>{pct(c.margem)}</span>}</div>
-      <div className="r2"><span>{v.condPgto}</span><span><span className={'pill '+(v.status==='ok'?'p-ok':'p-warn')}>{v.status==='ok'?'OK':'Aberto'}</span> <button className="ib" onClick={e=>{e.stopPropagation();onDocs(v.modelo);}}>📎</button></span></div>
+      <div className="r2"><span>{v.condPgto}</span><span><button className={'pill '+(v.status==='ok'?'p-ok':'p-warn')} style={{border:0}} onClick={e=>{e.stopPropagation();toggle(v);}}>{v.status==='ok'?'✅ Recebido':'⏳ A receber'}</button> <button className="ib" onClick={e=>{e.stopPropagation();onDocs(v.modelo);}}>📎</button></span></div>
     </div>)}{!lista.length&&<div className="empty">Nenhuma venda encontrada.</div>}</div>
     {edit && <Modal title="Editar venda" onClose={()=>setEdit(null)} wide>
       <VendaForm inicial={edit} precos={precos} vendas={vendas} cfg={cfg} isAdmin={isAdmin} onCancel={()=>setEdit(null)}
